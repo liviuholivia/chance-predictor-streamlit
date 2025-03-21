@@ -15,7 +15,7 @@ icons = {
 
 def weighted_random_choice(values, weights, used_cards):
     total = sum(weights)
-    for _ in range(20):  # ננסה עד 20 פעמים למצוא קלף שלא בשימוש
+    for _ in range(20):
         r = random.uniform(0, total)
         upto = 0
         for val, w in zip(values, weights):
@@ -24,12 +24,11 @@ def weighted_random_choice(values, weights, used_cards):
                     return val
                 break
             upto += w
-    # אם לא נמצא קלף פנוי, מחזיר את הקלף עם הסיכוי הגבוה ביותר שלא בשימוש
     candidates = [(val, w) for val, w in zip(values, weights) if val not in used_cards]
     candidates.sort(key=lambda x: x[1], reverse=True)
     return candidates[0][0] if candidates else random.choice(values)
 
-# אלגוריתם משופר עם מניעת כפילויות ברמת האפשרות
+# אלגוריתם עם מניעת כפילויות ומיון לפי סדר הצורות הקבוע
 
 def generate_prediction(num_cards, df=None, single_suit=None):
     cards = []
@@ -55,6 +54,8 @@ def generate_prediction(num_cards, df=None, single_suit=None):
         used_cards.add(chosen_card)
         cards.append({"suit": suit_name, "card": chosen_card})
 
+    # מיון התוצאות לפי הסדר הקבוע של הצורות
+    cards.sort(key=lambda x: suits.index(x['suit']))
     return cards
 
 
@@ -63,7 +64,7 @@ def generate_options(num_cards, options_count=6, df=None, single_suit=None):
 
 # Streamlit UI
 st.set_page_config(page_title="חיזוי חכם לצ'אנס", page_icon="🎴", layout="centered")
-st.title("🎴 חיזוי חכם ומובן להגרלות צ׳אנס")
+st.title("🎴 חיזוי חכם ומסודר להגרלות צ׳אנס")
 st.markdown("בחר מספר קלפים, אפשר להעלות קובץ CSV, ולנתח צורה מסוימת אם בחרת קלף אחד.")
 
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריית הגרלות (לא חובה):", type=["csv"])
@@ -105,5 +106,5 @@ st.markdown("""
 - בחר כמה קלפים תרצה לנתח (1, 2, 3 או 4).
 - אם בחרת קלף אחד — תוכל לבחור את הצורה (תלתן, יהלום, לב אדום, לב שחור).
 - לחץ על 'צור תחזית מקצועית'.
-- יוצגו 6 תחזיות שונות ללא כפילויות, עם פירוט ברור.
+- יוצגו 6 תחזיות שונות, מסודרות תמיד לפי הסדר: תלתן, יהלום, לב אדום, לב שחור.
 """)

@@ -12,7 +12,6 @@ icons = {
 }
 
 # פונקציה לבחירה הסתברותית חכמה
-
 def weighted_random_choice(values, weights):
     total = sum(weights)
     r = random.uniform(0, total)
@@ -22,15 +21,16 @@ def weighted_random_choice(values, weights):
             return val
         upto += w
 
-# אלגוריתם משופר
-
-def generate_advanced_prediction(num_cards, df=None):
+# אלגוריתם משופר עם אפשרות בחירת קלף יחיד
+def generate_prediction(num_cards, df=None, single_suit=None):
     cards = []
-    for i in range(num_cards):
-        values = range(1, 14)
+    suits_to_use = [single_suit] if single_suit else suits[:num_cards]
 
+    for suit_name in suits_to_use:
+        values = range(1, 14)
         if df is not None:
-            col_name = df.columns[2 + i]
+            col_index = suits.index(suit_name) + 2
+            col_name = df.columns[col_index]
             freq_series = df[col_name].value_counts().reindex(range(1, 14), fill_value=1).values
         else:
             freq_series = np.random.uniform(0.5, 2.0, size=13)
@@ -42,33 +42,37 @@ def generate_advanced_prediction(num_cards, df=None):
         combined_weights = freq_series * 0.4 + trend_boost * 0.35 + explosive_factor * 0.2 + time_factor * 0.05
         chosen_card = weighted_random_choice(values, combined_weights)
 
-        cards.append({"suit": suits[i], "card": chosen_card})
+        cards.append({"suit": suit_name, "card": chosen_card})
 
     return cards
 
 
-def generate_advanced_options(num_cards, options_count=6, df=None):
-    return [generate_advanced_prediction(num_cards, df) for _ in range(options_count)]
+def generate_options(num_cards, options_count=6, df=None, single_suit=None):
+    return [generate_prediction(num_cards, df, single_suit) for _ in range(options_count)]
 
-# אפליקציה Streamlit
-st.title("🎴 חיזוי חכם ומשופר להגרלות צ׳אנס")
-st.markdown("בחר מספר קלפים, העלה קובץ CSV אם תרצה, ולחץ על כפתור התחזית.")
+# Streamlit UI
+st.title("🎴 חיזוי חכם ומובן להגרלות צ׳אנס")
+st.markdown("בחר מספר קלפים, אפשר להעלות קובץ CSV, ולנתח צורה מסוימת אם בחרת קלף אחד.")
 
-uploaded_file = st.file_uploader("העלה קובץ CSV עם נתוני הגרלות (לא חובה):", type=["csv"])
+uploaded_file = st.file_uploader("העלה קובץ CSV עם היסטוריית הגרלות (לא חובה):", type=["csv"])
 df = None
 if uploaded_file is not None:
     try:
         df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
-        df.columns = ["תאריך", "מספר הגרלה", "תלתן", "יהלום", "לב אדום", "לב שחור", "ריק"]  # תיקון שמות העמודות
+        df.columns = ["תאריך", "מספר הגרלה", "תלתן", "יהלום", "לב אדום", "לב שחור", "ריק"]
         st.success("✅ הקובץ נטען בהצלחה!")
         st.write(df.drop(columns=["ריק"]).head())
     except Exception as e:
         st.error(f"שגיאה בטעינת הקובץ: {e}")
 
-num_cards = st.radio("בחר מספר קלפים:", [1, 2, 3, 4], index=3, horizontal=True)
+num_cards = st.radio("בחר כמה קלפים לנתח:", [1, 2, 3, 4], index=3, horizontal=True)
+single_suit = None
+
+if num_cards == 1:
+    single_suit = st.selectbox("בחר את הצורה לחיזוי:", suits)
 
 if st.button("צור תחזית מקצועית"):
-    options = generate_advanced_options(num_cards, df=df)
+    options = generate_options(num_cards, df=df, single_suit=single_suit)
 
     for idx, option in enumerate(options, 1):
         st.subheader(f"אפשרות {idx}")
@@ -76,7 +80,7 @@ if st.button("צור תחזית מקצועית"):
             f"{icons[item['suit']]} {item['suit']}: {'A' if item['card'] == 1 else 'J' if item['card'] == 11 else 'Q' if item['card'] == 12 else 'K' if item['card'] == 13 else item['card']}"
             for item in option
         ])
-        st.write(pretty_line)
+        st.write(f"**{pretty_line}**")
 
         for item in option:
             card_display = "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
@@ -85,8 +89,9 @@ if st.button("צור תחזית מקצועית"):
 st.markdown("---")
 st.markdown("### 📖 מדריך שימוש:")
 st.markdown("""
-- העלה קובץ CSV עם תוצאות הגרלות (אם יש).
-- בחר את מספר הקלפים (1 עד 4).
+- העלה קובץ CSV אם יש.
+- בחר כמה קלפים לנתח.
+- אם בחרת קלף אחד, בחר את הצורה שברצונך לנתח.
 - לחץ על כפתור יצירת תחזית מקצועית.
-- יוצגו 6 אפשרויות עם הצגת הקלפים והצורות בסדר כמו באתר: תלתן, יהלום, לב אדום, לב שחור.
+- יוצגו 6 תחזיות מסודרות וברורות עם צורות ומספרים.
 """)

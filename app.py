@@ -11,7 +11,6 @@ icons = {
     "תלתן": "♣️",
 }
 
-# פונקציה להמרת קלפים מאותיות למספרים ולהיפך
 def convert_card_value(value):
     if isinstance(value, str):
         value = value.strip()
@@ -38,7 +37,7 @@ def display_card_value(val):
         return "K"
     return str(val)
 
-# פונקציה לחישוב בונוס סופר חכם (האלגוריתם נשאר זהה)
+# האלגוריתם המורחב עם כל הדפוסים:
 def calculate_super_trend_bonus(df, suit_column):
     values = range(1, 14)
     column_values = df[suit_column].apply(convert_card_value).values[:50]
@@ -48,122 +47,80 @@ def calculate_super_trend_bonus(df, suit_column):
         diff1 = column_values[i + 1] - column_values[i]
         diff2 = column_values[i + 2] - column_values[i + 1]
 
+        # רצפים עולים/יורדים
         if abs(diff1) == 1 and abs(diff2) == 1 and (diff1 == diff2):
             next_val = column_values[i + 2] + diff2
             if 1 <= next_val <= 13:
                 bonus_weights[next_val - 1] += 2.0
 
+        # מדרגות יורדות (מדרגה הפוכה)
         if diff1 < 0 and diff2 < 0:
             next_val = column_values[i + 2] + 3
             if next_val <= 13:
                 bonus_weights[next_val - 1] += 2.5
 
+        # חזרתיות תוך 3–5 הגרלות
         last_occurrences = df.iloc[i:i+5].applymap(convert_card_value).values.flatten()
         for val in values:
             if val in last_occurrences:
                 bonus_weights[val - 1] += 1.4
 
-        recent_val = column_values[i]
-        for val in values:
-            if (val % 2) != (recent_val % 2):
-                bonus_weights[val - 1] += 0.9
+        # שכנים של מספרים שהופיעו
+        for val in column_values[i:i+4]:
+            if val > 1:
+                bonus_weights[val - 2] += 0.8
+            if val < 13:
+                bonus_weights[val] += 0.8
 
-        row_values = df.iloc[i:i+4].applymap(convert_card_value).values.flatten()
-        for val in values:
-            if val in row_values:
-                bonus_weights[val - 1] += 1.3
+        # מחזוריות כל 7–9 הגרלות
+        if i >= 7:
+            back_val = column_values[i - 7]
+            bonus_weights[back_val - 1] += 1.2
 
+        # ראשוני אחרי רצף זוגי
+        if column_values[i] % 2 == 0 and column_values[i+1] % 2 == 0 and column_values[i+2] % 2 == 0:
+            for prime in [2, 3, 5, 7, 11]:
+                bonus_weights[prime - 1] += 1.5
+
+        # תבנית גלים
+        if diff1 > 0 and diff2 < 0:
+            mid_val = (column_values[i] + column_values[i+2]) // 2
+            bonus_weights[mid_val - 1] += 1.3
+
+        # בונוס לראשוניים כלליים
         for prime in [2, 3, 5, 7, 11]:
             bonus_weights[prime - 1] += 1.2
 
+        # ריבאונד אחרי קלפים גבוהים
         if column_values[i] in [11, 12, 13]:
             for mid in range(5, 10):
                 bonus_weights[mid - 1] += 1.5
 
+        # אלכסון בין צורות (דפוס בין העמודות)
+        if i < len(column_values) - 4:
+            diagonal_val = (column_values[i] + column_values[i+3]) // 2
+            if 1 <= diagonal_val <= 13:
+                bonus_weights[diagonal_val - 1] += 1.4
+
+        # ממוצע נע בטווח 10 הגרלות אחרונות
+        if i >= 9:
+            moving_avg = int(np.mean(column_values[i-9:i+1]))
+            if 1 <= moving_avg <= 13:
+                bonus_weights[moving_avg - 1] += 1.2
+
+        # דפוס פיבונאצ'י חלקי (הפרשים של 1, 2, 3 החוזרים)
+        if abs(diff1) == 1 and abs(diff2) == 2:
+            next_val = column_values[i + 2] + 3
+            if 1 <= next_val <= 13:
+                bonus_weights[next_val - 1] += 1.3
+
+        # מספר מרוכב אחרי רצף ראשוניים
+        if column_values[i] in [2, 3, 5, 7, 11] and column_values[i+1] in [2, 3, 5, 7, 11]:
+            for composite in [4, 6, 8, 9, 10, 12]:
+                bonus_weights[composite - 1] += 1.4
+
+        # בונוס קבוע למספרי אמצע (7, 8, 9)
+        for mid_num in [7, 8, 9]:
+            bonus_weights[mid_num - 1] += 1.3
+
     return bonus_weights
-
-# אלגוריתם חכם מותאם למבנה הקובץ שלך!
-def generate_prediction(df, mapping):
-    cards = []
-    used_cards = set()
-
-    for suit_name, suit_column in mapping.items():
-        values = range(1, 14)
-        freq_series = df[suit_column].apply(convert_card_value).value_counts().reindex(range(1, 14), fill_value=1).values
-        super_bonus = calculate_super_trend_bonus(df, suit_column)
-
-        trend_boost = np.random.uniform(0.8, 2.8, size=13)
-        explosive_factor = np.random.uniform(1.0, 4.0, size=13)
-        time_factor = np.random.uniform(0.9, 1.2, size=13)
-
-        combined_weights = freq_series * 0.25 + trend_boost * 0.25 + explosive_factor * 0.2 + time_factor * 0.05 + super_bonus * 0.25
-
-        chosen_card = weighted_random_choice(values, combined_weights, used_cards)
-        used_cards.add(chosen_card)
-        cards.append({"suit": suit_name, "card": chosen_card})
-
-    return cards
-
-# בחירת תוצאה חכמה
-
-def weighted_random_choice(values, weights, used_cards):
-    total = sum(weights)
-    for _ in range(20):
-        r = random.uniform(0, total)
-        upto = 0
-        for val, w in zip(values, weights):
-            if upto + w >= r:
-                if val not in used_cards:
-                    return val
-                break
-            upto += w
-    candidates = [(val, w) for val, w in zip(values, weights) if val not in used_cards]
-    candidates.sort(key=lambda x: x[1], reverse=True)
-    return candidates[0][0] if candidates else random.choice(values)
-
-# Streamlit UI
-st.set_page_config(page_title="מנוע חיזוי מותאם אישית", page_icon="🎴", layout="centered")
-st.title("🎴 תחזית מותאמת אישית לצ׳אנס (לפי הקובץ הרשמי שלך)")
-
-uploaded_file = st.file_uploader("📥 העלה את קובץ ה-CSV שלך מהאתר הרשמי:", type=["csv"])
-df = None
-
-if uploaded_file is not None:
-    try:
-        df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
-        st.success("✅ הקובץ נטען בהצלחה!")
-        df.columns = ['תאריך', 'מספר הגרלה', 'תלתן', 'יהלום', 'לב אדום', 'לב שחור', 'ריק']
-        df = df[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
-        mapping = {"לב שחור": "לב שחור", "לב אדום": "לב אדום", "יהלום": "יהלום", "תלתן": "תלתן"}
-
-        st.markdown("### 50 הגרלות אחרונות:")
-        display_df = df.head(50).copy()
-        for suit in ["לב שחור", "לב אדום", "יהלום", "תלתן"]:
-            display_df[suit] = display_df[suit].apply(convert_card_value).apply(
-                lambda x: f"{display_card_value(x)} {icons[suit]}" if pd.notnull(x) else x
-            )
-        st.dataframe(display_df)
-
-    except Exception as e:
-        st.error(f"❗ שגיאה בטעינת הקובץ: {e}")
-
-if uploaded_file is not None and st.button("✨ צור תחזית חכמה"):
-    options = [generate_prediction(df, mapping) for _ in range(6)]
-
-    for idx, option in enumerate(options, 1):
-        st.markdown(f"#### 🃏 תחזית לאפשרות {idx}")
-
-        table_data = {f"{icons[item['suit']]} {item['suit']}": [
-            display_card_value(item['card']) for item in option
-        ]}
-        table_df = pd.DataFrame(table_data)
-        st.table(table_df)
-
-st.markdown("---")
-st.markdown("### 📖 איך זה עובד:")
-st.markdown("""
-- המערכת מזהה את סדר העמודות מהקובץ שלך.
-- מציגה 50 הגרלות אחרונות עם הצורות והקלפים המומרים.
-- מבצעת חיזוי סופר חכם על פי רצפים, מגמות, שיקופים וראשוניים.
-- נבנה על ידי ליביו הוליביה.
-""")

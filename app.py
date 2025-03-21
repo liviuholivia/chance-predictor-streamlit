@@ -51,36 +51,37 @@ def generate_options(num_cards, options_count=6, df=None, single_suit=None):
     return [generate_prediction(num_cards, df, single_suit) for _ in range(options_count)]
 
 # Streamlit UI
+st.set_page_config(page_title="חיזוי חכם לצ'אנס", page_icon="🎴", layout="centered")
 st.title("🎴 חיזוי חכם ומובן להגרלות צ׳אנס")
 st.markdown("בחר מספר קלפים, אפשר להעלות קובץ CSV, ולנתח צורה מסוימת אם בחרת קלף אחד.")
 
-uploaded_file = st.file_uploader("העלה קובץ CSV עם היסטוריית הגרלות (לא חובה):", type=["csv"])
+uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריית הגרלות (לא חובה):", type=["csv"])
 df = None
 if uploaded_file is not None:
     try:
         df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
         df.columns = ["תאריך", "מספר הגרלה", "תלתן", "יהלום", "לב אדום", "לב שחור", "ריק"]
         st.success("✅ הקובץ נטען בהצלחה!")
-        st.write(df.drop(columns=["ריק"]).head())
+        st.dataframe(df.drop(columns=["ריק"]).head())
     except Exception as e:
-        st.error(f"שגיאה בטעינת הקובץ: {e}")
+        st.error(f"❗ שגיאה בטעינת הקובץ: {e}")
 
-num_cards = st.radio("בחר כמה קלפים לנתח:", [1, 2, 3, 4], index=3, horizontal=True)
+num_cards = st.radio("📊 בחר כמה קלפים לנתח:", [1, 2, 3, 4], index=3, horizontal=True)
 single_suit = None
 
 if num_cards == 1:
     single_suit = st.selectbox("בחר את הצורה לחיזוי:", suits)
 
-if st.button("צור תחזית מקצועית"):
+if st.button("✨ צור תחזית מקצועית"):
     options = generate_options(num_cards, df=df, single_suit=single_suit)
 
     for idx, option in enumerate(options, 1):
-        st.subheader(f"אפשרות {idx}")
+        st.markdown(f"#### 🃏 תחזית מלאה לאפשרות {idx}")
         pretty_line = " | ".join([
             f"{icons[item['suit']]} {item['suit']}: {'A' if item['card'] == 1 else 'J' if item['card'] == 11 else 'Q' if item['card'] == 12 else 'K' if item['card'] == 13 else item['card']}"
             for item in option
         ])
-        st.write(f"**{pretty_line}**")
+        st.markdown(f"**{pretty_line}**")
 
         for item in option:
             card_display = "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
@@ -89,9 +90,9 @@ if st.button("צור תחזית מקצועית"):
 st.markdown("---")
 st.markdown("### 📖 מדריך שימוש:")
 st.markdown("""
-- העלה קובץ CSV אם יש.
-- בחר כמה קלפים לנתח.
-- אם בחרת קלף אחד, בחר את הצורה שברצונך לנתח.
-- לחץ על כפתור יצירת תחזית מקצועית.
-- יוצגו 6 תחזיות מסודרות וברורות עם צורות ומספרים.
+- העלה קובץ CSV עם היסטוריית הגרלות (לא חובה).
+- בחר כמה קלפים תרצה לנתח (1, 2, 3 או 4).
+- אם בחרת קלף אחד — תוכל לבחור את הצורה (תלתן, יהלום, לב אדום, לב שחור).
+- לחץ על 'צור תחזית מקצועית'.
+- יוצגו 6 תחזיות עם פירוט הקלפים בסדר ברור ונוח לקריאה.
 """)

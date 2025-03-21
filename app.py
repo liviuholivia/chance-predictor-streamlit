@@ -12,16 +12,25 @@ icons = {
 }
 
 # פונקציה לבחירה הסתברותית חכמה
-def weighted_random_choice(values, weights):
-    total = sum(weights)
-    r = random.uniform(0, total)
-    upto = 0
-    for val, w in zip(values, weights):
-        if upto + w >= r:
-            return val
-        upto += w
 
-# אלגוריתם משופר עם מניעת כפילויות
+def weighted_random_choice(values, weights, used_cards):
+    total = sum(weights)
+    for _ in range(20):  # ננסה עד 20 פעמים למצוא קלף שלא בשימוש
+        r = random.uniform(0, total)
+        upto = 0
+        for val, w in zip(values, weights):
+            if upto + w >= r:
+                if val not in used_cards:
+                    return val
+                break
+            upto += w
+    # אם לא נמצא קלף פנוי, מחזיר את הקלף עם הסיכוי הגבוה ביותר שלא בשימוש
+    candidates = [(val, w) for val, w in zip(values, weights) if val not in used_cards]
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    return candidates[0][0] if candidates else random.choice(values)
+
+# אלגוריתם משופר עם מניעת כפילויות ברמת האפשרות
+
 def generate_prediction(num_cards, df=None, single_suit=None):
     cards = []
     used_cards = set()
@@ -42,15 +51,7 @@ def generate_prediction(num_cards, df=None, single_suit=None):
 
         combined_weights = freq_series * 0.4 + trend_boost * 0.35 + explosive_factor * 0.2 + time_factor * 0.05
 
-        # בחירת קלף שלא נבחר קודם לאותה אפשרות
-        chosen_card = None
-        attempts = 0
-        while chosen_card is None or chosen_card in used_cards:
-            chosen_card = weighted_random_choice(values, combined_weights)
-            attempts += 1
-            if attempts > 10:  # במידה ואין אפשרות אחרת, יוצא מהלולאה
-                break
-
+        chosen_card = weighted_random_choice(values, combined_weights, used_cards)
         used_cards.add(chosen_card)
         cards.append({"suit": suit_name, "card": chosen_card})
 
@@ -104,5 +105,5 @@ st.markdown("""
 - בחר כמה קלפים תרצה לנתח (1, 2, 3 או 4).
 - אם בחרת קלף אחד — תוכל לבחור את הצורה (תלתן, יהלום, לב אדום, לב שחור).
 - לחץ על 'צור תחזית מקצועית'.
-- יוצגו 6 תחזיות ללא כפילויות, עם פירוט הקלפים בסדר ברור ונוח לקריאה.
+- יוצגו 6 תחזיות שונות ללא כפילויות, עם פירוט ברור.
 """)

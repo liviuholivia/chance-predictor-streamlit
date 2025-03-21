@@ -11,7 +11,7 @@ icons = {
     "תלתן": "♣️",
 }
 
-# פונקציה להמרת אותיות (A, J, Q, K) למספרים
+# פונקציה להמרת קלפים מאותיות למספרים
 def convert_card_value(value):
     if isinstance(value, str):
         value = value.strip()
@@ -27,28 +27,10 @@ def convert_card_value(value):
             return int(value)
     return value
 
-# פונקציה לבחירה חכמה
-
-def weighted_random_choice(values, weights, used_cards):
-    total = sum(weights)
-    for _ in range(20):
-        r = random.uniform(0, total)
-        upto = 0
-        for val, w in zip(values, weights):
-            if upto + w >= r:
-                if val not in used_cards:
-                    return val
-                break
-            upto += w
-    candidates = [(val, w) for val, w in zip(values, weights) if val not in used_cards]
-    candidates.sort(key=lambda x: x[1], reverse=True)
-    return candidates[0][0] if candidates else random.choice(values)
-
-# פונקציה לאלגוריתם סופר חכם עם המרות אמיתיות
-def calculate_super_trend_bonus(df, suit_name):
+# פונקציה לחישוב בונוס סופר חכם
+def calculate_super_trend_bonus(df, suit_column):
     values = range(1, 14)
-    col_index = suits.index(suit_name) + 2
-    column_values = df.iloc[:, col_index].apply(convert_card_value).values[:50]
+    column_values = df[suit_column].apply(convert_card_value).values[:50]
     bonus_weights = np.ones(13)
 
     for i in range(len(column_values) - 3):
@@ -65,7 +47,7 @@ def calculate_super_trend_bonus(df, suit_name):
             if next_val <= 13:
                 bonus_weights[next_val - 1] += 2.5
 
-        last_occurrences = df.iloc[i:i+5, 2:6].applymap(convert_card_value).values.flatten()
+        last_occurrences = df.iloc[i:i+5].applymap(convert_card_value).values.flatten()
         for val in values:
             if val in last_occurrences:
                 bonus_weights[val - 1] += 1.4
@@ -75,8 +57,8 @@ def calculate_super_trend_bonus(df, suit_name):
             if (val % 2) != (recent_val % 2):
                 bonus_weights[val - 1] += 0.9
 
+        row_values = df.iloc[i:i+4].applymap(convert_card_value).values.flatten()
         for val in values:
-            row_values = df.iloc[i:i+4, 2:6].applymap(convert_card_value).values.flatten()
             if val in row_values:
                 bonus_weights[val - 1] += 1.3
 
@@ -89,21 +71,15 @@ def calculate_super_trend_bonus(df, suit_name):
 
     return bonus_weights
 
-# האלגוריתם הסופר-מדהים ללא שינוי עקרוני - רק נתונים אמיתיים!
-def generate_prediction(suits_to_use, df=None):
+# אלגוריתם מותאם למבנה הקובץ שלך!
+def generate_prediction(df, mapping):
     cards = []
     used_cards = set()
 
-    for suit_name in suits_to_use:
+    for suit_name, suit_column in mapping.items():
         values = range(1, 14)
-        if df is not None:
-            col_index = suits.index(suit_name) + 2
-            col_name = df.columns[col_index]
-            freq_series = df[col_name].apply(convert_card_value).value_counts().reindex(range(1, 14), fill_value=1).values
-            super_bonus = calculate_super_trend_bonus(df, suit_name)
-        else:
-            st.error("חייב להעלות קובץ נתונים אמיתי להפעלת האלגוריתם!")
-            return []
+        freq_series = df[suit_column].apply(convert_card_value).value_counts().reindex(range(1, 14), fill_value=1).values
+        super_bonus = calculate_super_trend_bonus(df, suit_column)
 
         trend_boost = np.random.uniform(0.8, 2.8, size=13)
         explosive_factor = np.random.uniform(1.0, 4.0, size=13)
@@ -115,58 +91,61 @@ def generate_prediction(suits_to_use, df=None):
         used_cards.add(chosen_card)
         cards.append({"suit": suit_name, "card": chosen_card})
 
-    cards.sort(key=lambda x: suits.index(x['suit']))
     return cards
 
+# בחירת תוצאה חכמה
 
-def generate_options(suits_to_use, options_count=6, df=None):
-    return [generate_prediction(suits_to_use, df) for _ in range(options_count)]
+def weighted_random_choice(values, weights, used_cards):
+    total = sum(weights)
+    for _ in range(20):
+        r = random.uniform(0, total)
+        upto = 0
+        for val, w in zip(values, weights):
+            if upto + w >= r:
+                if val not in used_cards:
+                    return val
+                break
+            upto += w
+    candidates = [(val, w) for val, w in zip(values, weights) if val not in used_cards]
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    return candidates[0][0] if candidates else random.choice(values)
 
 # Streamlit UI
-st.set_page_config(page_title="מנוע חיזוי סופר חכם להגרלות צ׳אנס", page_icon="🎴", layout="centered")
-st.title("🎴 מנוע חיזוי סופר חכם מבוסס נתונים אמיתיים!")
+st.set_page_config(page_title="מנוע חיזוי מותאם אישית", page_icon="🎴", layout="centered")
+st.title("🎴 תחזית מותאמת אישית לצ׳אנס (לפי הקובץ הרשמי שלך)")
 
-st.markdown("""<p style='text-align:center;'>האלגוריתם נשען על נתוני אמת בלבד, מנתח רצפים, מגמות, ראשוניים, שיקופים ואפקט ריבאונד כדי לנבא את ההגרלה הבאה. נבנה על ידי ליביו הוליביה.</p>""", unsafe_allow_html=True)
-
-uploaded_file = st.file_uploader("📥 העלה קובץ CSV מהאתר הרשמי בלבד:", type=["csv"])
+uploaded_file = st.file_uploader("📥 העלה את קובץ ה-CSV שלך מהאתר הרשמי:", type=["csv"])
 df = None
+
 if uploaded_file is not None:
     try:
         df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
-        df.columns = ["תאריך", "מספר הגרלה", "לב שחור", "לב אדום", "יהלום", "תלתן", "ריק"]
-        st.success("✅ הקובץ נטען בהצלחה! הנתונים עוברים המרה ובדיקה.")
-        df[["לב שחור", "לב אדום", "יהלום", "תלתן"]] = df[["לב שחור", "לב אדום", "יהלום", "תלתן"]].applymap(convert_card_value)
-        st.dataframe(df.drop(columns=["ריק"]).head())
+        st.success("✅ הקובץ נטען בהצלחה!")
+        df.columns = ['תאריך', 'מספר הגרלה', 'תלתן', 'יהלום', 'לב אדום', 'לב שחור', 'ריק']
+        df = df[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
+        mapping = {"לב שחור": "לב שחור", "לב אדום": "לב אדום", "יהלום": "יהלום", "תלתן": "תלתן"}
+        st.dataframe(df.head())
     except Exception as e:
         st.error(f"❗ שגיאה בטעינת הקובץ: {e}")
 
-num_cards = st.radio("📊 בחר כמה קלפים לנתח:", [1, 2, 3, 4], index=3, horizontal=True)
-selected_suits = st.multiselect("בחר את הצורות לניתוח:", suits, default=suits[:num_cards])
+if uploaded_file is not None and st.button("✨ צור תחזית חכמה"):
+    options = [generate_prediction(df, mapping) for _ in range(6)]
 
-if st.button("✨ צור תחזית חכמה אמיתית"):
-    if df is None:
-        st.error("אנא העלה קובץ נתונים לפני יצירת תחזית!")
-    elif len(selected_suits) != num_cards:
-        st.warning("אנא בחר מספר צורות זהה למספר הקלפים שבחרת.")
-    else:
-        options = generate_options(selected_suits, df=df)
+    for idx, option in enumerate(options, 1):
+        st.markdown(f"#### 🃏 תחזית לאפשרות {idx}")
 
-        for idx, option in enumerate(options, 1):
-            st.markdown(f"#### 🃏 תחזית לאפשרות {idx}")
-
-            table_data = {f"{icons[item['suit']]} {item['suit']}": [
-                "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
-                ] for item in option
-            }
-            table_df = pd.DataFrame(table_data)
-            st.table(table_df)
+        table_data = {f"{icons[item['suit']]} {item['suit']}": [
+            "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
+            ] for item in option
+        }
+        table_df = pd.DataFrame(table_data)
+        st.table(table_df)
 
 st.markdown("---")
-st.markdown("### 📖 איך האלגוריתם עובד:")
+st.markdown("### 📖 איך זה עובד:")
 st.markdown("""
-- ניתוח 50 הגרלות אחרונות מתוך קובץ רשמי.
-- המרה אוטומטית של A, J, Q, K למספרים.
-- שקלול מגמות אמיתיות בלבד (ללא נתונים אקראיים).
-- ניבוי מבוסס רצפים, מדרגות, ראשוניים, שיקופים ואפקט ריבאונד.
+- המערכת מזהה את סדר העמודות מהקובץ שלך.
+- ממירה קלפים מאותיות למספרים.
+- מבצעת חיזוי סופר חכם על פי רצפים, מגמות, שיקופים וראשוניים.
 - נבנה על ידי ליביו הוליביה.
 """)

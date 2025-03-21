@@ -30,10 +30,9 @@ def weighted_random_choice(values, weights, used_cards):
 
 # אלגוריתם עם מניעת כפילויות ומיון לפי סדר הצורות הקבוע
 
-def generate_prediction(num_cards, df=None, single_suit=None):
+def generate_prediction(suits_to_use, df=None):
     cards = []
     used_cards = set()
-    suits_to_use = [single_suit] if single_suit else suits[:num_cards]
 
     for suit_name in suits_to_use:
         values = range(1, 14)
@@ -58,13 +57,13 @@ def generate_prediction(num_cards, df=None, single_suit=None):
     return cards
 
 
-def generate_options(num_cards, options_count=6, df=None, single_suit=None):
-    return [generate_prediction(num_cards, df, single_suit) for _ in range(options_count)]
+def generate_options(suits_to_use, options_count=6, df=None):
+    return [generate_prediction(suits_to_use, df) for _ in range(options_count)]
 
 # Streamlit UI
 st.set_page_config(page_title="חיזוי חכם לצ'אנס", page_icon="🎴", layout="centered")
 st.title("🎴 חיזוי חכם ומסודר להגרלות צ׳אנס")
-st.markdown("בחר מספר קלפים, אפשר להעלות קובץ CSV, ולנתח צורה מסוימת אם בחרת קלף אחד.")
+st.markdown("בחר מספר קלפים ואפשר לבחור גם את הצורות שברצונך לנתח.")
 
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריית הגרלות (לא חובה):", type=["csv"])
 df = None
@@ -78,31 +77,31 @@ if uploaded_file is not None:
         st.error(f"❗ שגיאה בטעינת הקובץ: {e}")
 
 num_cards = st.radio("📊 בחר כמה קלפים לנתח:", [1, 2, 3, 4], index=3, horizontal=True)
-single_suit = None
-
-if num_cards == 1:
-    single_suit = st.selectbox("בחר את הצורה לחיזוי:", suits)
+selected_suits = st.multiselect("בחר את הצורות לניתוח:", suits, default=suits[:num_cards])
 
 if st.button("✨ צור תחזית מקצועית"):
-    options = generate_options(num_cards, df=df, single_suit=single_suit)
+    if len(selected_suits) != num_cards:
+        st.warning("אנא בחר מספר צורות זהה למספר הקלפים שבחרת.")
+    else:
+        options = generate_options(selected_suits, df=df)
 
-    for idx, option in enumerate(options, 1):
-        st.markdown(f"#### 🃏 תחזית מלאה לאפשרות {idx}")
+        for idx, option in enumerate(options, 1):
+            st.markdown(f"#### 🃏 תחזית מלאה לאפשרות {idx}")
 
-        # הצגת טבלה לרוחב עם צורות ומספרים לפי הסדר: לב שחור, לב אדום, יהלום, תלתן
-        table_data = {f"{icons[item['suit']]} {item['suit']}": [
-            "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
-            ] for item in option
-        }
-        table_df = pd.DataFrame(table_data)
-        st.table(table_df)
+            # טבלה לרוחב עם הצורות והמספרים
+            table_data = {f"{icons[item['suit']]} {item['suit']}": [
+                "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
+                ] for item in option
+            }
+            table_df = pd.DataFrame(table_data)
+            st.table(table_df)
 
 st.markdown("---")
 st.markdown("### 📖 מדריך שימוש:")
 st.markdown("""
-- העלה קובץ CSV עם היסטוריית הגרלות (לא חובה).
+- העלה קובץ CSV אם יש.
 - בחר כמה קלפים תרצה לנתח (1, 2, 3 או 4).
-- אם בחרת קלף אחד — תוכל לבחור את הצורה (לב שחור, לב אדום, יהלום, תלתן).
+- בחר את הצורות הרלוונטיות (בדיוק כמספר הקלפים שבחרת).
 - לחץ על 'צור תחזית מקצועית'.
--נבנה על ידי ליביו הוליביה
+- כל תחזית תוצג בטבלה לרוחב, בסדר ברור עם סמלים ומספרים.
 """)

@@ -54,7 +54,6 @@ def generate_prediction(num_cards, df=None, single_suit=None):
         used_cards.add(chosen_card)
         cards.append({"suit": suit_name, "card": chosen_card})
 
-    # מיון התוצאות לפי הסדר הקבוע של הצורות
     cards.sort(key=lambda x: suits.index(x['suit']))
     return cards
 
@@ -89,15 +88,14 @@ if st.button("✨ צור תחזית מקצועית"):
 
     for idx, option in enumerate(options, 1):
         st.markdown(f"#### 🃏 תחזית מלאה לאפשרות {idx}")
-        pretty_line = " | ".join([
-            f"{icons[item['suit']]} {item['suit']}: {'A' if item['card'] == 1 else 'J' if item['card'] == 11 else 'Q' if item['card'] == 12 else 'K' if item['card'] == 13 else item['card']}"
-            for item in option
-        ])
-        st.markdown(f"**{pretty_line}**")
 
-        for item in option:
-            card_display = "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
-            st.write(f"{icons[item['suit']]} {item['suit']}: {card_display}")
+        # הצגת טבלה לרוחב עם צורות ומספרים
+        table_data = {f"{icons[item['suit']]} {item['suit']}": [
+            "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
+            ] for item in option
+        }
+        table_df = pd.DataFrame(table_data)
+        st.table(table_df)
 
 st.markdown("---")
 st.markdown("### 📖 מדריך שימוש:")
@@ -106,5 +104,5 @@ st.markdown("""
 - בחר כמה קלפים תרצה לנתח (1, 2, 3 או 4).
 - אם בחרת קלף אחד — תוכל לבחור את הצורה (תלתן, יהלום, לב אדום, לב שחור).
 - לחץ על 'צור תחזית מקצועית'.
-- יוצגו 6 תחזיות שונות, מסודרות תמיד לפי הסדר: תלתן, יהלום, לב אדום, לב שחור.
+- כל תחזית תוצג בטבלה לרוחב עם צורות ומספרים ברורים.
 """)

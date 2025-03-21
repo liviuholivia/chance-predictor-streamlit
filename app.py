@@ -21,9 +21,10 @@ def weighted_random_choice(values, weights):
             return val
         upto += w
 
-# אלגוריתם משופר עם אפשרות בחירת קלף יחיד
+# אלגוריתם משופר עם מניעת כפילויות
 def generate_prediction(num_cards, df=None, single_suit=None):
     cards = []
+    used_cards = set()
     suits_to_use = [single_suit] if single_suit else suits[:num_cards]
 
     for suit_name in suits_to_use:
@@ -40,8 +41,17 @@ def generate_prediction(num_cards, df=None, single_suit=None):
         time_factor = np.random.uniform(0.9, 1.2, size=13)
 
         combined_weights = freq_series * 0.4 + trend_boost * 0.35 + explosive_factor * 0.2 + time_factor * 0.05
-        chosen_card = weighted_random_choice(values, combined_weights)
 
+        # בחירת קלף שלא נבחר קודם לאותה אפשרות
+        chosen_card = None
+        attempts = 0
+        while chosen_card is None or chosen_card in used_cards:
+            chosen_card = weighted_random_choice(values, combined_weights)
+            attempts += 1
+            if attempts > 10:  # במידה ואין אפשרות אחרת, יוצא מהלולאה
+                break
+
+        used_cards.add(chosen_card)
         cards.append({"suit": suit_name, "card": chosen_card})
 
     return cards
@@ -94,5 +104,5 @@ st.markdown("""
 - בחר כמה קלפים תרצה לנתח (1, 2, 3 או 4).
 - אם בחרת קלף אחד — תוכל לבחור את הצורה (תלתן, יהלום, לב אדום, לב שחור).
 - לחץ על 'צור תחזית מקצועית'.
-- יוצגו 6 תחזיות עם פירוט הקלפים בסדר ברור ונוח לקריאה.
+- יוצגו 6 תחזיות ללא כפילויות, עם פירוט הקלפים בסדר ברור ונוח לקריאה.
 """)

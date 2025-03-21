@@ -42,6 +42,21 @@ def display_card_value(val):
         return "K"
     return str(val)
 
+def weighted_random_choice(values, weights, used_cards):
+    total = sum(weights)
+    for _ in range(20):
+        r = random.uniform(0, total)
+        upto = 0
+        for val, w in zip(values, weights):
+            if upto + w >= r:
+                if val not in used_cards:
+                    return val
+                break
+            upto += w
+    candidates = [(val, w) for val, w in zip(values, weights) if val not in used_cards]
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    return candidates[0][0] if candidates else random.choice(values)
+
 def calculate_super_trend_bonus(df, suit_column):
     values = range(1, 14)
     column_values = df[suit_column].apply(convert_card_value).dropna().values[:50]
@@ -114,3 +129,51 @@ def calculate_super_trend_bonus(df, suit_column):
             bonus_weights[mid_num - 1] += 1.3
 
     return bonus_weights
+
+def generate_prediction(df):
+    cards = []
+    used_cards = set()
+
+    for suit in suits:
+        values = range(1, 14)
+        freq_series = df[suit].apply(convert_card_value).value_counts().reindex(range(1, 14), fill_value=1).values
+        super_bonus = calculate_super_trend_bonus(df, suit)
+
+        trend_boost = np.random.uniform(0.8, 2.8, size=13)
+        explosive_factor = np.random.uniform(1.0, 4.0, size=13)
+        time_factor = np.random.uniform(0.9, 1.2, size=13)
+
+        combined_weights = freq_series * 0.25 + trend_boost * 0.25 + explosive_factor * 0.2 + time_factor * 0.05 + super_bonus * 0.25
+
+        chosen_card = weighted_random_choice(values, combined_weights, used_cards)
+        used_cards.add(chosen_card)
+        cards.append({"suit": suit, "card": chosen_card})
+
+    return cards
+
+st.set_page_config(page_title="חיזוי צ׳אנס חכם", layout="centered")
+st.title("🎴 חיזוי הגרלה חכם לצ׳אנס")
+
+uploaded_file = st.file_uploader("📥 העלה את קובץ היסטוריית ההגרלות (CSV):", type=["csv"])
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
+    df.columns = ['תאריך', 'מספר הגרלה', 'תלתן', 'יהלום', 'לב אדום', 'לב שחור', 'ריק']
+    df = df[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
+
+    st.subheader("50 הגרלות אחרונות:")
+    display_df = df.head(50).copy()
+    for suit in suits:
+        display_df[suit] = display_df[suit].apply(convert_card_value).apply(lambda x: f"{display_card_value(x)} {icons[suit]}" if pd.notnull(x) else x)
+    st.dataframe(display_df)
+
+    if st.button("✨ צור תחזית חכמה"):
+        predictions = [generate_prediction(df) for _ in range(6)]
+
+        for idx, pred in enumerate(predictions, start=1):
+            st.markdown(f"#### תחזית מספר {idx}")
+            row = " | ".join([f"{icons[item['suit']]} {display_card_value(item['card'])}" for item in pred])
+            st.write(row)
+
+st.markdown("---")
+st.markdown("נבנה ע""י ליביו הוליביה")

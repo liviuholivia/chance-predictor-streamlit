@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import random
@@ -12,6 +11,8 @@ icons = {
     "תלתן": "♣️",
 }
 
+# פונקציה לבחירה הסתברותית חכמה
+
 def weighted_random_choice(values, weights):
     total = sum(weights)
     r = random.uniform(0, total)
@@ -20,6 +21,8 @@ def weighted_random_choice(values, weights):
         if upto + w >= r:
             return val
         upto += w
+
+# אלגוריתם משופר
 
 def generate_advanced_prediction(num_cards, df=None):
     cards = []
@@ -43,19 +46,22 @@ def generate_advanced_prediction(num_cards, df=None):
 
     return cards
 
+
 def generate_advanced_options(num_cards, options_count=6, df=None):
     return [generate_advanced_prediction(num_cards, df) for _ in range(options_count)]
 
-st.title("🎯 חיזוי חכם ומשופר להגרלות צ׳אנס")
-st.markdown("בחר את מספר הקלפים, העלה קובץ CSV אם יש לך, ולחץ על יצירת תחזיות.")
+# אפליקציה Streamlit
+st.title("🎴 חיזוי חכם ומשופר להגרלות צ׳אנס")
+st.markdown("בחר מספר קלפים, העלה קובץ CSV אם תרצה, ולחץ על כפתור התחזית.")
 
 uploaded_file = st.file_uploader("העלה קובץ CSV עם נתוני הגרלות (לא חובה):", type=["csv"])
 df = None
 if uploaded_file is not None:
     try:
         df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
+        df.columns = ["תאריך", "מספר הגרלה", "תלתן", "יהלום", "לב אדום", "לב שחור", "ריק"]  # תיקון שמות העמודות
         st.success("✅ הקובץ נטען בהצלחה!")
-        st.write(df.head())
+        st.write(df.drop(columns=["ריק"]).head())
     except Exception as e:
         st.error(f"שגיאה בטעינת הקובץ: {e}")
 
@@ -66,17 +72,21 @@ if st.button("צור תחזית מקצועית"):
 
     for idx, option in enumerate(options, 1):
         st.subheader(f"אפשרות {idx}")
+        pretty_line = " | ".join([
+            f"{icons[item['suit']]} {item['suit']}: {'A' if item['card'] == 1 else 'J' if item['card'] == 11 else 'Q' if item['card'] == 12 else 'K' if item['card'] == 13 else item['card']}"
+            for item in option
+        ])
+        st.write(pretty_line)
+
         for item in option:
             card_display = "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
             st.write(f"{icons[item['suit']]} {item['suit']}: {card_display}")
 
 st.markdown("---")
+st.markdown("### 📖 מדריך שימוש:")
 st.markdown("""
-### 📖 מדריך שימוש משודרג:
-- ניתן להעלות קובץ CSV עם היסטוריית הגרלות.
-- בחר את מספר הקלפים (1, 2, 3 או 4).
-- לחץ על כפתור "צור תחזית מקצועית".
-- האלגוריתם ישתמש בנתונים שלך אם קיימים.
-- יוצגו 6 אפשרויות תחזית מגוונות.
-- מוצג לפי סדר: תלתן, יהלום, לב אדום, לב שחור.
+- העלה קובץ CSV עם תוצאות הגרלות (אם יש).
+- בחר את מספר הקלפים (1 עד 4).
+- לחץ על כפתור יצירת תחזית מקצועית.
+- יוצגו 6 אפשרויות עם הצגת הקלפים והצורות בסדר כמו באתר: תלתן, יהלום, לב אדום, לב שחור.
 """)

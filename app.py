@@ -11,7 +11,7 @@ icons = {
     "תלתן": "♣️",
 }
 
-# פונקציה להמרת קלפים מאותיות למספרים
+# פונקציה להמרת קלפים מאותיות למספרים ולהיפך
 def convert_card_value(value):
     if isinstance(value, str):
         value = value.strip()
@@ -27,7 +27,18 @@ def convert_card_value(value):
             return int(value)
     return value
 
-# פונקציה לחישוב בונוס סופר חכם
+def display_card_value(val):
+    if val == 1:
+        return "A"
+    elif val == 11:
+        return "J"
+    elif val == 12:
+        return "Q"
+    elif val == 13:
+        return "K"
+    return str(val)
+
+# פונקציה לחישוב בונוס סופר חכם (האלגוריתם נשאר זהה)
 def calculate_super_trend_bonus(df, suit_column):
     values = range(1, 14)
     column_values = df[suit_column].apply(convert_card_value).values[:50]
@@ -71,7 +82,7 @@ def calculate_super_trend_bonus(df, suit_column):
 
     return bonus_weights
 
-# אלגוריתם מותאם למבנה הקובץ שלך!
+# אלגוריתם חכם מותאם למבנה הקובץ שלך!
 def generate_prediction(df, mapping):
     cards = []
     used_cards = set()
@@ -129,7 +140,7 @@ if uploaded_file is not None:
         display_df = df.head(50).copy()
         for suit in ["לב שחור", "לב אדום", "יהלום", "תלתן"]:
             display_df[suit] = display_df[suit].apply(convert_card_value).apply(
-                lambda x: f"{x} {icons[suit]}" if pd.notnull(x) else x
+                lambda x: f"{display_card_value(x)} {icons[suit]}" if pd.notnull(x) else x
             )
         st.dataframe(display_df)
 
@@ -143,17 +154,16 @@ if uploaded_file is not None and st.button("✨ צור תחזית חכמה"):
         st.markdown(f"#### 🃏 תחזית לאפשרות {idx}")
 
         table_data = {f"{icons[item['suit']]} {item['suit']}": [
-            "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
-            ] for item in option
-        }
+            display_card_value(item['card']) for item in option
+        ]}
         table_df = pd.DataFrame(table_data)
         st.table(table_df)
 
 st.markdown("---")
 st.markdown("### 📖 איך זה עובד:")
 st.markdown("""
-- המערכת מזהה את סדר העמודות מהקובץ שלך
--מציגה 50 הגרלות אחרונות 
+- המערכת מזהה את סדר העמודות מהקובץ שלך.
+- מציגה 50 הגרלות אחרונות עם הצורות והקלפים המומרים.
 - מבצעת חיזוי סופר חכם על פי רצפים, מגמות, שיקופים וראשוניים.
-- נבנה על ידי ליביו הוליביה
+- נבנה על ידי ליביו הוליביה.
 """)

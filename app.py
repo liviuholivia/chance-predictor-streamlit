@@ -124,7 +124,15 @@ if uploaded_file is not None:
         df.columns = ['תאריך', 'מספר הגרלה', 'תלתן', 'יהלום', 'לב אדום', 'לב שחור', 'ריק']
         df = df[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
         mapping = {"לב שחור": "לב שחור", "לב אדום": "לב אדום", "יהלום": "יהלום", "תלתן": "תלתן"}
-        st.dataframe(df.head())
+
+        st.markdown("### 50 הגרלות אחרונות:")
+        display_df = df.head(50).copy()
+        for suit in ["לב שחור", "לב אדום", "יהלום", "תלתן"]:
+            display_df[suit] = display_df[suit].apply(convert_card_value).apply(
+                lambda x: f"{x} {icons[suit]}" if pd.notnull(x) else x
+            )
+        st.dataframe(display_df)
+
     except Exception as e:
         st.error(f"❗ שגיאה בטעינת הקובץ: {e}")
 
@@ -144,8 +152,8 @@ if uploaded_file is not None and st.button("✨ צור תחזית חכמה"):
 st.markdown("---")
 st.markdown("### 📖 איך זה עובד:")
 st.markdown("""
-- המערכת מזהה את סדר העמודות מהקובץ שלך.
-- ממירה קלפים מאותיות למספרים.
+- המערכת מזהה את סדר העמודות מהקובץ שלך
+-מציגה 50 הגרלות אחרונות 
 - מבצעת חיזוי סופר חכם על פי רצפים, מגמות, שיקופים וראשוניים.
-- נבנה על ידי ליביו הוליביה.
+- נבנה על ידי ליביו הוליביה
 """)

@@ -3,7 +3,7 @@ import pandas as pd
 import random
 import numpy as np
 
-suits = ["תלתן", "יהלום", "לב אדום", "לב שחור"]
+suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {
     "לב שחור": "♠️", 
     "לב אדום": "♥️",
@@ -71,7 +71,7 @@ df = None
 if uploaded_file is not None:
     try:
         df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
-        df.columns = ["תאריך", "מספר הגרלה", "תלתן", "יהלום", "לב אדום", "לב שחור", "ריק"]
+        df.columns = ["תאריך", "מספר הגרלה", "לב שחור", "לב אדום", "יהלום", "תלתן", "ריק"]
         st.success("✅ הקובץ נטען בהצלחה!")
         st.dataframe(df.drop(columns=["ריק"]).head())
     except Exception as e:
@@ -89,7 +89,7 @@ if st.button("✨ צור תחזית מקצועית"):
     for idx, option in enumerate(options, 1):
         st.markdown(f"#### 🃏 תחזית מלאה לאפשרות {idx}")
 
-        # הצגת טבלה לרוחב עם צורות ומספרים
+        # הצגת טבלה לרוחב עם צורות ומספרים לפי הסדר: לב שחור, לב אדום, יהלום, תלתן
         table_data = {f"{icons[item['suit']]} {item['suit']}": [
             "A" if item['card'] == 1 else "J" if item['card'] == 11 else "Q" if item['card'] == 12 else "K" if item['card'] == 13 else item['card']
             ] for item in option
@@ -102,7 +102,7 @@ st.markdown("### 📖 מדריך שימוש:")
 st.markdown("""
 - העלה קובץ CSV עם היסטוריית הגרלות (לא חובה).
 - בחר כמה קלפים תרצה לנתח (1, 2, 3 או 4).
-- אם בחרת קלף אחד — תוכל לבחור את הצורה (תלתן, יהלום, לב אדום, לב שחור).
+- אם בחרת קלף אחד — תוכל לבחור את הצורה (לב שחור, לב אדום, יהלום, תלתן).
 - לחץ על 'צור תחזית מקצועית'.
-- כל תחזית תוצג בטבלה לרוחב עם צורות ומספרים ברורים.
+-נבנה על ידי ליביו הוליביה
 """)

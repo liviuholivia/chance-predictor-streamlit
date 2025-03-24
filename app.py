@@ -1,7 +1,5 @@
 
 import streamlit as st
-import requests
-from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
 import random
@@ -11,28 +9,6 @@ values_display = {11: 'J', 12: 'Q', 13: 'K', 14: 'A'}
 
 def card_display(value):
     return values_display.get(value, str(value))
-
-def fetch_chance_data():
-    url = "https://www.pais.co.il/chance/statistics.aspx"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
-    results_table = soup.find("table", {"class": "result-table"})
-    rows = results_table.find_all("tr")[1:]
-    data = []
-    for row in rows:
-        cols = row.find_all("td")
-        if len(cols) >= 6:
-            data.append({
-                "תאריך": cols[0].get_text(strip=True),
-                "מספר הגרלה": cols[1].get_text(strip=True),
-                "תלתן": int(cols[2].get_text(strip=True)),
-                "יהלום": int(cols[3].get_text(strip=True)),
-                "לב אדום": int(cols[4].get_text(strip=True)),
-                "לב שחור": int(cols[5].get_text(strip=True))
-            })
-    df = pd.DataFrame(data)
-    df.to_csv("Chance_Latest.csv", index=False, encoding="utf-8-sig")
-    return df
 
 def smart_prediction(df):
     last_50 = df.head(50)
@@ -56,11 +32,13 @@ def smart_prediction(df):
 
     return predictions
 
-st.title("🎴 תחזיות צ'אנס חכמות לפי אלגוריתם מתקדם")
+st.title("🎴 תחזיות צ'אנס חכמות מקובץ CSV")
 
-if st.button("🚀 משוך נתונים חיים מהאתר"):
-    df = fetch_chance_data()
-    st.success("✅ הנתונים נמשכו בהצלחה!")
+uploaded_file = st.file_uploader("העלה קובץ CSV עם היסטוריית הגרלות:", type=["csv"])
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.success("✅ הקובץ נטען בהצלחה!")
     st.write("### 50 ההגרלות האחרונות:")
     st.dataframe(df.head(50))
 

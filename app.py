@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# סדר הצגת הקלפים: משמאל לימין — עלה, לב, יהלום, תלתן
 ordered_suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {
     "לב שחור": "♠️", 
@@ -61,8 +60,8 @@ def predict_from_50(df):
         prediction.append({"suit": suit, "card": chosen_card})
     return prediction
 
-st.set_page_config(page_title="אלגוריתם חכם 50 הגרלות")
-st.title("🎴 תחזיות צ׳אנס מסודרות — תצוגה לרוחב כמו באתר הרשמי")
+st.set_page_config(page_title="אלגוריתם חכם - תחזית צ׳אנס")
+st.title("🎴 תחזיות צ׳אנס - תצוגה ברורה ואופקית כמו באתר הרשמי")
 
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריית הגרלות:", type=["csv"])
 
@@ -73,19 +72,23 @@ if uploaded_file is not None:
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         df[suit] = df[suit].apply(convert_card_value)
 
-    st.write("### 50 ההגרלות האחרונות (מהחדשות לישנות):")
+    st.write("### 50 ההגרלות האחרונות:")
     preview = df.sort_values(by='מספר הגרלה', ascending=False).head(50).copy()
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         preview[suit] = preview[suit].apply(display_card_value)
     st.dataframe(preview)
 
-    st.write("### 10 תחזיות מדויקות — מוצגות לרוחב בסדר הנכון:")
+    st.write("### 10 תחזיות מוצגות לרוחב:")
     for i in range(10):
         prediction = predict_from_50(df)
-        # מוודאים שהתחזית מוצגת בדיוק בסדר: עלה | לב | יהלום | תלתן
         ordered_prediction = [next(p for p in prediction if p['suit'] == suit) for suit in ordered_suits]
-        line = " | ".join([f"{icons[p['suit']]} {display_card_value(p['card'])}" for p in ordered_prediction])
-        st.markdown(f"**תחזית {i+1}:** {line}")
+        line = " | ".join(
+            [f"{icons[p['suit']]} <b>{display_card_value(p['card'])}</b>" for p in ordered_prediction]
+        )
+        st.markdown(
+            f"<div style='text-align:center; direction: rtl; font-size:20px; margin-bottom:10px;'>תחזית {i+1}: {line}</div>",
+            unsafe_allow_html=True,
+        )
 
 st.markdown("---")
-st.markdown("פותח ע\"י ליביו הוליביה — אלגוריתם מדויק ותצוגה מקצועית.")
+st.markdown("פותח ע\"י ליביו הוליביה — תצוגה מושלמת לרוחב, כמו באתר הרשמי.")

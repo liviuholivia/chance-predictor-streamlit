@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# סדר קבוע להצגה: משמאל לימין — לב שחור, לב אדום, יהלום, תלתן
 ordered_suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {
     "לב שחור": "♠️", 
@@ -62,7 +61,7 @@ def predict_from_50(df):
     return prediction
 
 st.set_page_config(page_title="אלגוריתם חכם 50 הגרלות")
-st.title("🎴 תחזיות צ׳אנס מדויקות - מוצגות בקו ישר, משמאל לימין")
+st.title("🎴 תחזיות מוצגות בטבלה ברורה, בשורה ישרה (משמאל לימין)")
 
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריית הגרלות:", type=["csv"])
 
@@ -73,26 +72,28 @@ if uploaded_file is not None:
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         df[suit] = df[suit].apply(convert_card_value)
 
-    st.write("### 50 ההגרלות האחרונות (בסדר משמאל לימין):")
+    st.write("### 50 ההגרלות האחרונות (מסודרות משמאל לימין):")
     preview = df.sort_values(by='מספר הגרלה', ascending=False).head(50).copy()
     preview = preview[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
     for suit in ["לב שחור", "לב אדום", "יהלום", "תלתן"]:
         preview[suit] = preview[suit].apply(display_card_value)
     st.dataframe(preview)
 
-    st.write("### 25 תחזיות מדויקות ומסודרות לרוחב:")
-    st.markdown("<style>div.css-1v0mbdj, .css-1v0mbdj {text-align: left !important;}</style>", unsafe_allow_html=True)
-
-    for i in range(25):
+    # יצירת טבלה ברורה עם התחזיות
+    st.write("### 25 תחזיות מוצגות בטבלה בצורה ישרה וברורה:")
+    table_html = "<table style='width:100%; border-collapse: collapse;'>"
+    table_html += "<tr><th>#</th><th>♠️ עלה</th><th>♥️ לב</th><th>♦️ יהלום</th><th>♣️ תלתן</th></tr>"
+    for i in range(1, 26):
         prediction = predict_from_50(df)
         ordered_prediction = [next(p for p in prediction if p['suit'] == suit) for suit in ordered_suits]
-        line = " | ".join(
-            [f"{icons[p['suit']]} <b>{display_card_value(p['card'])}</b>" for p in ordered_prediction]
-        )
-        st.markdown(
-            f"<div style='text-align: left; font-size:20px; margin-bottom:5px;'>תחזית {i+1}: {line}</div>",
-            unsafe_allow_html=True,
-        )
+        row = f"<tr><td style='text-align:center;'>{i}</td>"
+        for p in ordered_prediction:
+            row += f"<td style='text-align:center; padding:5px; border:1px solid #ddd;'>{icons[p['suit']]} {display_card_value(p['card'])}</td>"
+        row += "</tr>"
+        table_html += row
+    table_html += "</table>"
+
+    st.markdown(table_html, unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("פותח ע\"י ליביו הוליביה — תצוגה מקצועית, מסודרת בקו ישר, משמאל לימין.")
+st.markdown("פותח ע\"י ליביו הוליביה — תצוגה בטבלה מקצועית, ברורה ואסתטית.")

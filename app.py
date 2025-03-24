@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import datetime
 
 # הגדרת הצורות והאייקונים
 ordered_suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
@@ -20,15 +21,15 @@ def convert_card_value(value):
     return value
 
 pull_relations = {
-    7: [8, 10, 11], 8: [9, 11, 13], 9: [10, 12, 13],
-    10: [7, 14, 11], 11: [9, 13, 10], 12: [11, 9, 14],
-    13: [14, 10, 8], 14: [9, 12, 10]
+    7: [8, 10, 11, 14], 8: [9, 11, 13, 14], 9: [10, 12, 13, 14],
+    10: [7, 14, 11, 9], 11: [9, 13, 10, 8], 12: [11, 9, 14, 10],
+    13: [14, 10, 8, 9], 14: [9, 12, 10, 7]
 }
 
 diagonal_relations = {
-    7: [9, 10, 13], 8: [10, 11, 12], 9: [11, 13, 7],
-    10: [7, 9, 14], 11: [9, 12, 7], 12: [10, 13, 8],
-    13: [7, 10, 14], 14: [9, 11, 12]
+    7: [9, 10, 13, 14], 8: [10, 11, 12, 14], 9: [11, 13, 7, 14],
+    10: [7, 9, 14, 12], 11: [9, 12, 7, 14], 12: [10, 13, 8, 14],
+    13: [7, 10, 14, 9], 14: [9, 11, 12, 10]
 }
 
 def build_weights(df, suit):
@@ -41,6 +42,8 @@ def build_weights(df, suit):
     correction_factor = np.ones(len(allowed_cards))
 
     last_card = recent.iloc[0][suit]
+    last_date = pd.to_datetime(recent.iloc[0]['תאריך'])
+    weekday = last_date.weekday()
 
     for idx, card in enumerate(allowed_cards):
         if card in pull_relations:
@@ -59,6 +62,12 @@ def build_weights(df, suit):
         if abs(card - last_card) >= 4:
             correction_factor[idx] += 3
 
+        # השפעה של יום
+        if weekday in [0, 1] and suit in ["לב אדום", "יהלום"]:
+            correction_factor[idx] += 1.3
+        if weekday in [4, 5] and suit in ["תלתן", "לב שחור"]:
+            pull_factor[idx] += 1.5
+
     base = freq * 0.15 + np.random.uniform(0.9, 1.1, size=len(allowed_cards))
     combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.15
 
@@ -72,7 +81,7 @@ def predict_next(df):
         prediction.append({"suit": suit, "card": chosen})
     return prediction
 
-st.title("🎴 אלגוריתם סופר חכם להגרלות צ'אנס — גרסה מעודכנת")
+st.title("🎴 אלגוריתם סופר חכם להגרלות צ'אנס — גרסה הכי חזקה!")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של 50 הגרלות אחרונות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -105,4 +114,4 @@ if uploaded_file is not None:
 
     st.table(pred_df)
 
-st.markdown("פותח ע" + "י ליביו הוליביה — גרסה מעודכנת על פי כל הדפוסים שנלמדו!")
+st.markdown("פותח ע" + "י ליביו הוליביה — גרסה הכי חזקה על פי כל הדפוסים שנלמדו!")

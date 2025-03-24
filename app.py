@@ -20,8 +20,9 @@ def convert_card_value(value):
         elif value.isdigit(): return int(value)
     return value
 
+# שדרוג משיכות ויחסי אלכסון לפי כל הדפוסים שנלמדו
 pull_relations = {
-    7: [8, 10, 11, 14], 8: [9, 11, 13, 14], 9: [10, 12, 13, 14],
+    7: [8, 9, 10, 11, 14], 8: [9, 11, 13, 14], 9: [10, 12, 13, 14],
     10: [7, 14, 11, 9], 11: [9, 13, 10, 8], 12: [11, 9, 14, 10],
     13: [14, 10, 8, 9], 14: [9, 12, 10, 7]
 }
@@ -49,27 +50,27 @@ def build_weights(df, suit):
         if card in pull_relations:
             for pull_card in pull_relations[card]:
                 if pull_card in allowed_cards:
-                    pull_factor[allowed_cards.index(pull_card)] += 2
+                    pull_factor[allowed_cards.index(pull_card)] += 2.2
 
         if card in diagonal_relations:
             for diag in diagonal_relations[card]:
                 if diag in allowed_cards:
-                    diagonal_factor[allowed_cards.index(diag)] += 1.8
+                    diagonal_factor[allowed_cards.index(diag)] += 2
 
         if card == last_card:
-            lock_factor[idx] += 2.5
+            lock_factor[idx] += 2.7
 
         if abs(card - last_card) >= 4:
-            correction_factor[idx] += 3
+            correction_factor[idx] += 3.5
 
-        # השפעה של יום
+        # השפעה יומית מורחבת
         if weekday in [0, 1] and suit in ["לב אדום", "יהלום"]:
-            correction_factor[idx] += 1.3
+            correction_factor[idx] += 1.4
         if weekday in [4, 5] and suit in ["תלתן", "לב שחור"]:
-            pull_factor[idx] += 1.5
+            pull_factor[idx] += 1.7
 
-    base = freq * 0.15 + np.random.uniform(0.9, 1.1, size=len(allowed_cards))
-    combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.15
+    base = freq * 0.18 + np.random.uniform(0.9, 1.1, size=len(allowed_cards))
+    combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.2
 
     return combined / combined.sum()
 
@@ -81,7 +82,7 @@ def predict_next(df):
         prediction.append({"suit": suit, "card": chosen})
     return prediction
 
-st.title("🎴 אלגוריתם סופר חכם להגרלות צ'אנס — גרסה הכי חזקה!")
+st.title("🎴 אלגוריתם סופר חכם להגרלות צ'אנס — כולל כל הדפוסים והחיזוקים!")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של 50 הגרלות אחרונות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -114,4 +115,4 @@ if uploaded_file is not None:
 
     st.table(pred_df)
 
-st.markdown("פותח ע" + "י ליביו הוליביה — גרסה הכי חזקה על פי כל הדפוסים שנלמדו!")
+st.markdown("פותח על ידי ליביו הוליביה — גרסה סופית ועוצמתית עם כל הדפוסים שנלמדו!")

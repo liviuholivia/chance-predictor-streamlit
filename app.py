@@ -53,7 +53,8 @@ def display_card_value(val):
     return str(val)
 
 def build_advanced_weights(df, suit):
-    last_50 = df.tail(50)
+    # סינון 50 ההגרלות האחרונות לפי מספר הגרלה הגבוה ביותר
+    last_50 = df.sort_values(by='מספר הגרלה', ascending=False).head(50)
     freq_series = last_50[suit].value_counts().reindex(range(1, 14), fill_value=1).values
     trend = np.random.uniform(0.8, 2.0, size=13)
     explosive = np.random.uniform(1.0, 3.0, size=13)
@@ -75,9 +76,9 @@ def predict_from_50(df):
     return prediction
 
 st.set_page_config(page_title="אלגוריתם חכם 50 הגרלות")
-st.title("🎴 אלגוריתם מבוסס על ניתוח 50 הגרלות אחרונות")
+st.title("🎴 אלגוריתם שמבוסס על ניתוח 50 ההגרלות האחרונות לפי הגרלה עדכנית ביותר")
 
-uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריה של לפחות 50 הגרלות:", type=["csv"])
+uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריית הגרלות:", type=["csv"])
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
@@ -86,17 +87,17 @@ if uploaded_file is not None:
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         df[suit] = df[suit].apply(convert_card_value)
 
-    st.write("### תצוגה מקדימה של 50 ההגרלות האחרונות:")
-    preview = df.tail(50).copy()
+    st.write("### 50 ההגרלות האחרונות שנבחרו (לפי המספר הגבוה ביותר):")
+    preview = df.sort_values(by='מספר הגרלה', ascending=False).head(50).copy()
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         preview[suit] = preview[suit].apply(display_card_value)
     st.dataframe(preview)
 
-    st.write("### 10 תחזיות על סמך ניתוח 50 הגרלות:")
+    st.write("### 10 תחזיות על סמך 50 ההגרלות האחרונות:")
     for i in range(10):
         prediction = predict_from_50(df)
         line = " | ".join([f"{icons[p['suit']]} {display_card_value(p['card'])}" for p in prediction])
         st.markdown(f"**תחזית {i+1}:** {line}")
 
 st.markdown("---")
-st.markdown("פותח ע\"י ליביו הוליביה — ניתוח חכם של 50 הגרלות.")
+st.markdown("פותח ע\"י ליביו הוליביה — ניתוח חכם של 50 הגרלות אחרונות מעודכנות.")

@@ -5,27 +5,31 @@ import numpy as np
 # הגדרת הצורות והאייקונים
 ordered_suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {"לב שחור": "♠️", "לב אדום": "♥️", "יהלום": "♦️", "תלתן": "♣️"}
-allowed_cards = [7, 8, 9, 10, 11, 12, 13, 1]  # מ-7 עד אס
+allowed_cards = [7, 8, 9, 10, 11, 12, 13, 14]  # מ-7 עד אס (אס=14)
 
 def display_card_value(val):
-    return {1: "A", 11: "J", 12: "Q", 13: "K"}.get(val, str(val))
+    return {11: "J", 12: "Q", 13: "K", 14: "A"}.get(val, str(val))
 
 def convert_card_value(value):
     if isinstance(value, str):
-        if value.strip() == 'A': return 1
+        if value.strip() == 'A': return 14
         elif value.strip() == 'J': return 11
         elif value.strip() == 'Q': return 12
         elif value.strip() == 'K': return 13
         elif value.isdigit(): return int(value)
     return value
 
-pull_relations = {7: [8, 10, 11], 8: [9, 11, 13], 9: [10, 12, 13],
-                  10: [7, 1, 11], 11: [9, 13, 10], 12: [11, 9, 1],
-                  13: [1, 10, 8], 1: [9, 12, 10]}
+pull_relations = {
+    7: [8, 10, 11], 8: [9, 11, 13], 9: [10, 12, 13],
+    10: [7, 14, 11], 11: [9, 13, 10], 12: [11, 9, 14],
+    13: [14, 10, 8], 14: [9, 12, 10]
+}
 
-diagonal_relations = {7: [9, 10, 13], 8: [10, 11, 12], 9: [11, 13, 7],
-                       10: [7, 9, 1], 11: [9, 12, 7], 12: [10, 13, 8],
-                       13: [7, 10, 1], 1: [9, 11, 12]}
+diagonal_relations = {
+    7: [9, 10, 13], 8: [10, 11, 12], 9: [11, 13, 7],
+    10: [7, 9, 14], 11: [9, 12, 7], 12: [10, 13, 8],
+    13: [7, 10, 14], 14: [9, 11, 12]
+}
 
 def build_weights(df, suit):
     recent = df.sort_values('מספר הגרלה', ascending=False).head(50)

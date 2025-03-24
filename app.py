@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
+# סדר קבוע להצגה: משמאל לימין
 ordered_suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {
     "לב שחור": "♠️", 
@@ -60,8 +61,8 @@ def predict_from_50(df):
         prediction.append({"suit": suit, "card": chosen_card})
     return prediction
 
-st.set_page_config(page_title="אלגוריתם חכם - תחזית צ׳אנס")
-st.title("🎴 תחזיות צ׳אנס - תצוגה ברורה ואופקית כמו באתר הרשמי")
+st.set_page_config(page_title="אלגוריתם חכם 50 הגרלות")
+st.title("🎴 תחזיות צ׳אנס מוצגות לרוחב — משמאל לימין")
 
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריית הגרלות:", type=["csv"])
 
@@ -72,23 +73,24 @@ if uploaded_file is not None:
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         df[suit] = df[suit].apply(convert_card_value)
 
-    st.write("### 50 ההגרלות האחרונות:")
+    st.write("### 50 ההגרלות האחרונות (לפי סדר יורד):")
     preview = df.sort_values(by='מספר הגרלה', ascending=False).head(50).copy()
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         preview[suit] = preview[suit].apply(display_card_value)
     st.dataframe(preview)
 
-    st.write("### 10 תחזיות מוצגות לרוחב:")
-    for i in range(10):
+    st.write("### 25 תחזיות מוצגות לרוחב (משמאל לימין):")
+    for i in range(25):
         prediction = predict_from_50(df)
+        # מסדר לפי הסדר: לב שחור, לב אדום, יהלום, תלתן משמאל לימין
         ordered_prediction = [next(p for p in prediction if p['suit'] == suit) for suit in ordered_suits]
         line = " | ".join(
             [f"{icons[p['suit']]} <b>{display_card_value(p['card'])}</b>" for p in ordered_prediction]
         )
         st.markdown(
-            f"<div style='text-align:center; direction: rtl; font-size:20px; margin-bottom:10px;'>תחזית {i+1}: {line}</div>",
+            f"<div style='text-align: left; font-size:20px; margin-bottom:10px;'>תחזית {i+1}: {line}</div>",
             unsafe_allow_html=True,
         )
 
 st.markdown("---")
-st.markdown("פותח ע\"י ליביו הוליביה — תצוגה מושלמת לרוחב, כמו באתר הרשמי.")
+st.markdown("פותח ע\"י ליביו הוליביה — תצוגה מושלמת לרוחב, בסדר הנכון כמו באתר הרשמי.")

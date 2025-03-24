@@ -20,7 +20,7 @@ def convert_card_value(value):
         elif value.isdigit(): return int(value)
     return value
 
-# משיכות, אלכסונים, תיקונים ונעילות משולבים:
+# משיכות, אלכסונים, תיקונים, מעבר צורה ונעילות
 pull_relations = {
     7: [8, 10, 11], 8: [9, 11, 13], 9: [10, 12, 13],
     10: [7, 1, 11], 11: [9, 13, 10], 12: [11, 9, 1],
@@ -33,6 +33,12 @@ diagonal_relations = {
     13: [7, 10, 1], 1: [9, 11, 12]
 }
 
+# זיהוי מעבר קלפים בין צורות
+cross_suit_relations = {
+    7: [9, 10], 8: [10, 12], 9: [7, 11],
+    10: [8, 1], 11: [9, 13], 12: [11, 7], 13: [10, 1], 1: [10, 12]
+}
+
 def build_weights(df, suit):
     recent = df.sort_values('מספר הגרלה', ascending=False).head(50)
     freq = recent[suit].value_counts().reindex(allowed_cards, fill_value=1).values
@@ -41,6 +47,7 @@ def build_weights(df, suit):
     diagonal_factor = np.ones(len(allowed_cards))
     lock_factor = np.ones(len(allowed_cards))
     correction_factor = np.ones(len(allowed_cards))
+    cross_factor = np.ones(len(allowed_cards))
 
     last_card = recent.iloc[0][suit]
 
@@ -55,6 +62,10 @@ def build_weights(df, suit):
                 if diag in allowed_cards:
                     diagonal_factor[allowed_cards.index(diag)] += 1.8
 
+        if card in cross_suit_relations:
+            for cross in cross_suit_relations[card]:
+                cross_factor[allowed_cards.index(cross)] += 1.5
+
         if card == last_card:
             lock_factor[idx] += 2.5
 
@@ -62,7 +73,7 @@ def build_weights(df, suit):
             correction_factor[idx] += 3
 
     base = freq * 0.15 + np.random.uniform(0.9, 1.1, size=len(allowed_cards))
-    combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.15
+    combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * cross_factor * 0.15 * lock_factor * 0.15 * correction_factor * 0.15
 
     return combined / combined.sum()
 
@@ -74,7 +85,7 @@ def predict_next(df):
         prediction.append({"suit": suit, "card": chosen})
     return prediction
 
-st.title("🎴 אלגוריתם סופר חכם להגרלות צ'אנס — גרסה מעודכנת")
+st.title("🎴 אלגוריתם אולטימטיבי לצ'אנס — גרסה סופר משודרגת")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של 50 הגרלות אחרונות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -87,7 +98,7 @@ if uploaded_file is not None:
     df = df.sort_values(by='מספר הגרלה', ascending=False).head(50)
     st.write(df[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
 
-    st.write("### 25 תחזיות בטבלה:")
+    st.write("### 25 תחזיות מסודרות בטבלה:")
 
     predictions_data = []
     for i in range(1, 26):
@@ -96,11 +107,9 @@ if uploaded_file is not None:
         predictions_data.append(row)
 
     pred_df = pd.DataFrame(predictions_data)
-    pred_df = pred_df[ordered_suits]  # לפי סדר הצורות
-
-    # הוספת אייקונים לכותרות
+    pred_df = pred_df[ordered_suits]
     pred_df.columns = [f"{icons[s]} {s}" for s in ordered_suits]
 
     st.table(pred_df)
 
-st.markdown("פותח ע" + "י ליביו הוליביה — גרסה מעודכנת על פי כל הדפוסים שנלמדו!")
+st.markdown("פותח על ידי ליביו הוליביה — גרסה משודרגת עם זיהוי כל הדפוסים הנסתרים!")

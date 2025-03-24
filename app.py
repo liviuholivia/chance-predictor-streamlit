@@ -1,20 +1,17 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import requests
-from bs4 import BeautifulSoup
 import datetime
+from bs4 import BeautifulSoup
+import requests
 
-# הגדרת צורות ואייקונים
+# הגדרת הצורות והאייקונים
 ordered_suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {"לב שחור": "♠️", "לב אדום": "♥️", "יהלום": "♦️", "תלתן": "♣️"}
 allowed_cards = [7, 8, 9, 10, 11, 12, 13, 14]  # מ-7 עד אס (אס=14)
 
-# המרה של ערך קלף
-
 def display_card_value(val):
     return {11: "J", 12: "Q", 13: "K", 14: "A"}.get(val, str(val))
-
 
 def convert_card_value(value):
     if isinstance(value, str):
@@ -25,39 +22,7 @@ def convert_card_value(value):
         elif value.isdigit(): return int(value)
     return value
 
-# משיכת נתונים מהאתר:
-
-def fetch_chance_data():
-    url = "https://www.pais.co.il/chance/archive.aspx"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    table = soup.find("table", {"class": "archiveResults"})
-    rows = table.find_all("tr")[1:]
-
-    data = []
-    for row in rows:
-        cols = row.find_all("td")
-        if len(cols) >= 6:
-            date = cols[0].text.strip()
-            draw_num = cols[1].text.strip()
-            clover = cols[2].text.strip()
-            diamond = cols[3].text.strip()
-            heart = cols[4].text.strip()
-            spade = cols[5].text.strip()
-            data.append([date, draw_num, clover, diamond, heart, spade])
-
-    df = pd.DataFrame(data, columns=["תאריך", "מספר הגרלה", "תלתן", "יהלום", "לב אדום", "לב שחור"])
-
-    for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
-        df[suit] = df[suit].apply(convert_card_value)
-
-    df['מספר הגרלה'] = df['מספר הגרלה'].astype(int)
-    df = df.sort_values(by='מספר הגרלה', ascending=False).head(50)
-    return df
-
-# דפוסים ויחסי משיכה/אלכסונים
-
+# משיכות ויחסי אלכסון מתקדמים
 pull_relations = {
     7: [8, 9, 10, 11, 14], 8: [9, 11, 13, 14], 9: [10, 12, 13, 14],
     10: [7, 14, 11, 9], 11: [9, 13, 10, 8], 12: [11, 9, 14, 10],
@@ -70,18 +35,39 @@ diagonal_relations = {
     13: [7, 10, 14, 9], 14: [9, 11, 12, 10]
 }
 
-# חישוב משקלים חכם
+def infer_draw_time(date_str, draw_number):
+    date = pd.to_datetime(date_str, dayfirst=True)
+    weekday = date.weekday()
+
+    # ראשון-חמישי: 9 בבוקר כל שעתיים עד 21:00
+    if weekday in range(0, 5):
+        index = (draw_number - 1) % 7
+        hour = 9 + index * 2
+        time = datetime.time(hour, 0)
+    # שישי: 10:00, 12:00, 14:00
+    elif weekday == 5:
+        index = (draw_number - 1) % 3
+        time = [datetime.time(10, 0), datetime.time(12, 0), datetime.time(14, 0)][index]
+    # שבת: 21:30, 23:00
+    elif weekday == 6:
+        index = (draw_number - 1) % 2
+        time = [datetime.time(21, 30), datetime.time(23, 0)][index]
+    else:
+        time = datetime.time(0, 0)
+
+    return time.strftime('%H:%M')
 
 def build_weights(df, suit):
-    freq = df[suit].value_counts().reindex(allowed_cards, fill_value=1).values
+    recent = df.sort_values('מספר הגרלה', ascending=False).head(50)
+    freq = recent[suit].value_counts().reindex(allowed_cards, fill_value=1).values
 
     pull_factor = np.ones(len(allowed_cards))
     diagonal_factor = np.ones(len(allowed_cards))
     lock_factor = np.ones(len(allowed_cards))
     correction_factor = np.ones(len(allowed_cards))
 
-    last_card = df.iloc[0][suit]
-    last_date = pd.to_datetime(df.iloc[0]['תאריך'], dayfirst=True)
+    last_card = recent.iloc[0][suit]
+    last_date = pd.to_datetime(recent.iloc[0]['תאריך'])
     weekday = last_date.weekday()
 
     for idx, card in enumerate(allowed_cards):
@@ -111,8 +97,6 @@ def build_weights(df, suit):
 
     return combined / combined.sum()
 
-# תחזית הבאה
-
 def predict_next(df):
     prediction = []
     for suit in ordered_suits:
@@ -121,20 +105,28 @@ def predict_next(df):
         prediction.append({"suit": suit, "card": chosen})
     return prediction
 
-# Streamlit APP
-st.title("🎴 אלגוריתם צ'אנס סופר חכם כולל בוט חיבור ישיר לארכיון")
+st.title("🎴 אלגוריתם חכם עם תחזיות ושעות")
+uploaded_file = st.file_uploader("📥 העלה קובץ CSV של 50 הגרלות אחרונות:", type=["csv"])
 
-if st.button("📡 טען נתונים אוטומטית מהאתר"):
-    df = fetch_chance_data()
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
+    df.columns = ['תאריך', 'מספר הגרלה', 'תלתן', 'יהלום', 'לב אדום', 'לב שחור', 'ריק']
+
+    for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
+        df[suit] = df[suit].apply(convert_card_value)
+
+    df['שעה'] = df.apply(lambda row: infer_draw_time(row['תאריך'], row['מספר הגרלה']), axis=1)
+
+    df = df.sort_values(by='מספר הגרלה', ascending=False).head(50)
 
     df_display = df.copy()
     for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
         df_display[suit] = df_display[suit].apply(display_card_value)
 
-    st.write("### טבלת 50 הגרלות אחרונות (מהאתר)")
-    st.write(df_display[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
+    st.write("### טבלת 50 הגרלות אחרונות עם קלפים ושעות:")
+    st.write(df_display[['תאריך', 'שעה', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
 
-    st.write("### 10 תחזיות מדויקות:")
+    st.write("### 10 תחזיות בטבלה:")
     predictions_data = []
     for i in range(1, 11):
         prediction = predict_next(df)
@@ -143,7 +135,9 @@ if st.button("📡 טען נתונים אוטומטית מהאתר"):
 
     pred_df = pd.DataFrame(predictions_data)
     pred_df = pred_df[ordered_suits]
+
     pred_df.columns = [f"{icons[s]} {s}" for s in ordered_suits]
+
     st.table(pred_df)
 
-st.markdown("פותח על ידי ליביו הוליביה — הגרסה הכי מתקדמת שיש!")
+st.markdown("פותח על ידי ליביו הוליביה — הגרסה הסופית החזקה ביותר עם חישוב שעות!")

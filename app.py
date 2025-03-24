@@ -26,24 +26,23 @@ def infer_draw_time(date_str, draw_number):
 
     # ראשון עד חמישי - כל שעתיים מ-9:00 עד 21:00 (7 הגרלות ביום)
     if weekday in range(0, 5):
-        index = (draw_number - draw_number // 100 * 100) % 7
+        index = (draw_number - 1) % 7
         time = datetime.time(9 + index * 2, 0)
 
     # שישי - 3 הגרלות: 10:00, 12:00, 14:00
     elif weekday == 5:
-        index = (draw_number - draw_number // 100 * 100) % 3
+        index = (draw_number - 1) % 3
         time = [datetime.time(10, 0), datetime.time(12, 0), datetime.time(14, 0)][index]
 
     # שבת - 2 הגרלות: 21:30, 23:00
     elif weekday == 6:
-        index = (draw_number - draw_number // 100 * 100) % 2
+        index = (draw_number - 1) % 2
         time = [datetime.time(21, 30), datetime.time(23, 0)][index]
     else:
         time = datetime.time(0, 0)
 
     return time.strftime('%H:%M')
 
-# הדוגמה ממשיכה עם טעינת הקובץ, המרה והצגת השעות:
 st.title("🎴 צירוף שעות הגרלות לפי תאריך והגרלה")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של 50 הגרלות אחרונות:", type=["csv"])
 

@@ -1,3 +1,4 @@
+
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
@@ -8,12 +9,9 @@ import random
 suits = ["♠️ לב שחור", "♥️ לב אדום", "♦️ יהלום", "♣️ תלתן"]
 values_display = {11: 'J', 12: 'Q', 13: 'K', 14: 'A'}
 
-# פונקציה להצגת קלף
-
 def card_display(value):
     return values_display.get(value, str(value))
 
-# פונקציית משיכה מהאתר
 def fetch_chance_data():
     url = "https://www.pais.co.il/chance/statistics.aspx"
     response = requests.get(url)
@@ -36,7 +34,6 @@ def fetch_chance_data():
     df.to_csv("Chance_Latest.csv", index=False, encoding="utf-8-sig")
     return df
 
-# אלגוריתם חכם משולב לפי הדפוסים שהגדרנו
 def smart_prediction(df):
     last_50 = df.head(50)
     predictions = []
@@ -44,17 +41,13 @@ def smart_prediction(df):
     for suit in ["לב שחור", "לב אדום", "יהלום", "תלתן"]:
         values = last_50[suit].values
 
-        # שקלול חכם:
         freq_score = pd.Series(values).value_counts().reindex(range(7, 15), fill_value=1).values * 0.2
-
         trend_score = np.array([
             sum(abs(values[i] - values[i + 1]) <= 2 for i in range(len(values) - 1))
             for card in range(7, 15)
         ]) * 0.25
-
-        diagonal_score = np.random.uniform(0.9, 1.4, size=8) * 0.35  # משקל גבוה לאלכסונים
-
-        pull_score = np.array([random.uniform(1, 2.5) for _ in range(7, 15)]) * 0.2  # משיכות קלפים
+        diagonal_score = np.random.uniform(0.9, 1.4, size=8) * 0.35
+        pull_score = np.array([random.uniform(1, 2.5) for _ in range(7, 15)]) * 0.2
 
         combined = freq_score + trend_score + diagonal_score + pull_score
 
@@ -63,7 +56,6 @@ def smart_prediction(df):
 
     return predictions
 
-# Streamlit UI
 st.title("🎴 תחזיות צ'אנס חכמות לפי אלגוריתם מתקדם")
 
 if st.button("🚀 משוך נתונים חיים מהאתר"):

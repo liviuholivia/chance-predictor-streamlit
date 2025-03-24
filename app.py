@@ -7,7 +7,6 @@ ordered_suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {"לב שחור": "♠️", "לב אדום": "♥️", "יהלום": "♦️", "תלתן": "♣️"}
 allowed_cards = [7, 8, 9, 10, 11, 12, 13, 1]  # מ-7 עד אס
 
-# פונקציות המרה להצגת קלפים
 def display_card_value(val):
     return {1: "A", 11: "J", 12: "Q", 13: "K"}.get(val, str(val))
 
@@ -20,7 +19,6 @@ def convert_card_value(value):
         elif value.isdigit(): return int(value)
     return value
 
-# משיכות, אלכסונים, תיקונים ונעילות משולבים:
 pull_relations = {
     7: [8, 10, 11],
     8: [9, 11, 13],
@@ -61,10 +59,10 @@ def build_weights(df, suit):
                     diagonal_factor[allowed_cards.index(diag)] += 1.8
 
         if card == last_card:
-            lock_factor[idx] += 2.5  # נעילה
+            lock_factor[idx] += 2.5
 
         if abs(card - last_card) >= 4:
-            correction_factor[idx] += 3  # תיקון לקפיצה חריגה
+            correction_factor[idx] += 3
 
     base = freq * 0.15 + np.random.uniform(0.9, 1.1, size=len(allowed_cards))
     combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.15
@@ -92,10 +90,15 @@ if uploaded_file is not None:
     df = df.sort_values(by='מספר הגרלה', ascending=False).head(50)
     st.write(df[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
 
-    st.write("### 25 תחזיות:")
+    st.write("### טבלה של 25 תחזיות:")
+    results = []
     for i in range(1, 26):
         prediction = predict_next(df)
-        row_str = " | ".join([f"{icons[p['suit']]} {display_card_value(p['card'])}" for p in prediction])
-        st.write(f"**תחזית {i}: {row_str}**")
+        result_row = {p['suit']: display_card_value(p['card']) for p in prediction}
+        result_row['מספר תחזית'] = i
+        results.append(result_row)
 
-st.markdown("פותח ע" + "י ליביו הוליביה — גרסה מעודכנת על פי כל הדפוסים שנלמדו!")
+    results_df = pd.DataFrame(results)[['מספר תחזית', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
+    st.dataframe(results_df)
+
+st.markdown("פותח על ידי ליביו הוליביה — גרסה מעודכנת על פי כל הדפוסים שנלמדו!")

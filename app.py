@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]  # הסדר נשמר, אך יוצג הפוך
+suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {
     "לב שחור": "♠️", 
     "לב אדום": "♥️",
@@ -61,7 +61,7 @@ def predict_from_50(df):
     return prediction
 
 st.set_page_config(page_title="אלגוריתם חכם 50 הגרלות")
-st.title("🎴 אלגוריתם המבוסס על 50 ההגרלות האחרונות - תצוגה ברורה ומסודרת")
+st.title("🎴 אלגוריתם חכם - תחזיות על סמך 50 ההגרלות האחרונות")
 
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריית הגרלות:", type=["csv"])
 
@@ -72,19 +72,21 @@ if uploaded_file is not None:
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         df[suit] = df[suit].apply(convert_card_value)
 
-    st.write("### 50 ההגרלות האחרונות שנבחרו (לפי מספר הגרלה הגבוה ביותר):")
+    st.write("### 50 ההגרלות האחרונות (מספר גבוה ביותר קודם):")
     preview = df.sort_values(by='מספר הגרלה', ascending=False).head(50).copy()
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         preview[suit] = preview[suit].apply(display_card_value)
     st.dataframe(preview)
 
-    st.write("### 10 תחזיות על סמך 50 ההגרלות האחרונות:")
+    st.write("### תחזיות מדויקות:")
     for i in range(10):
         prediction = predict_from_50(df)
-        # מציג את התחזיות בסדר הפוך - לב שחור משמאל ותלתן מימין
-        prediction_reversed = prediction[::-1]
-        line = " | ".join([f"{icons[p['suit']]} {display_card_value(p['card'])}" for p in prediction_reversed])
-        st.markdown(f"**תחזית {i+1}:** {line}")
+        # נשמר הסדר כמו באתר: ♠️ לב שחור | ♥️ לב אדום | ♦️ יהלום | ♣️ תלתן
+        st.markdown(f"**תחזית {i+1}:**")
+        cols = st.columns(4)
+        for idx, p in enumerate(prediction):
+            with cols[idx]:
+                st.markdown(f"<h3 style='text-align: center;'>{icons[p['suit']]}<br>{display_card_value(p['card'])}</h3>", unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("פותח ע\"י ליביו הוליביה — אלגוריתם עם תצוגה מסודרת וברורה.")
+st.markdown("פותח ע\"י ליביו הוליביה — אלגוריתם חכם ומסודר.")

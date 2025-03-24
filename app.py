@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -101,9 +100,3 @@ if uploaded_file is not None:
 
 st.markdown("---")
 st.markdown("פותח ע\"י ליביו הוליביה — ניתוח חכם של 50 הגרלות.")
-
-
----
-
-אם תרצה, אכין לך גם תצוגה גרפית מקדימה כיצד זה ייראה. רוצה?
-

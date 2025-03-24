@@ -20,7 +20,18 @@ def convert_card_value(value):
         elif value.isdigit(): return int(value)
     return value
 
-# שדרוג משיכות ויחסי אלכסון לפי כל הדפוסים שנלמדו
+def get_draw_hour(date, draw_index, day_of_week):
+    # מיפוי שעות לפי יום בשבוע
+    if day_of_week in [0,1,2,3,4]:  # ראשון עד חמישי
+        schedule = ["09:00", "11:00", "13:00", "15:00", "17:00", "19:00", "21:00"]
+    elif day_of_week == 5:  # שישי
+        schedule = ["10:00", "12:00", "14:00"]
+    else:  # שבת
+        schedule = ["21:30", "23:00"]
+
+    return schedule[draw_index % len(schedule)]
+
+# חיזוקים לפי משיכות, אלכסונים, נעילות, קפיצות ויום-שעה
 pull_relations = {
     7: [8, 9, 10, 11, 14], 8: [9, 11, 13, 14], 9: [10, 12, 13, 14],
     10: [7, 14, 11, 9], 11: [9, 13, 10, 8], 12: [11, 9, 14, 10],
@@ -42,9 +53,13 @@ def build_weights(df, suit):
     lock_factor = np.ones(len(allowed_cards))
     correction_factor = np.ones(len(allowed_cards))
 
-    last_card = recent.iloc[0][suit]
-    last_date = pd.to_datetime(recent.iloc[0]['תאריך'])
+    last_row = recent.iloc[0]
+    last_card = last_row[suit]
+    last_date = pd.to_datetime(last_row['תאריך'])
     weekday = last_date.weekday()
+    draw_index = 0  # מתוך מיון, זו ההגרלה האחרונה
+
+    hour_str = get_draw_hour(last_date, draw_index, weekday)
 
     for idx, card in enumerate(allowed_cards):
         if card in pull_relations:
@@ -63,11 +78,12 @@ def build_weights(df, suit):
         if abs(card - last_card) >= 4:
             correction_factor[idx] += 3.5
 
-        # השפעה יומית מורחבת
-        if weekday in [0, 1] and suit in ["לב אדום", "יהלום"]:
-            correction_factor[idx] += 1.4
-        if weekday in [4, 5] and suit in ["תלתן", "לב שחור"]:
-            pull_factor[idx] += 1.7
+        # חיזוק לפי שעה ביום
+        hour = int(hour_str.split(":")[0])
+        if 9 <= hour <= 12 and suit in ["תלתן", "לב שחור"]:
+            pull_factor[idx] += 1.6
+        if 19 <= hour <= 23 and suit in ["לב אדום", "יהלום"]:
+            correction_factor[idx] += 1.8
 
     base = freq * 0.18 + np.random.uniform(0.9, 1.1, size=len(allowed_cards))
     combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.2
@@ -82,7 +98,7 @@ def predict_next(df):
         prediction.append({"suit": suit, "card": chosen})
     return prediction
 
-st.title("🎴 אלגוריתם סופר חכם להגרלות צ'אנס — כולל כל הדפוסים והחיזוקים!")
+st.title("🎴 אלגוריתם סופר חכם לצ'אנס עם זיהוי שעות! — גרסה מקצועית")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של 50 הגרלות אחרונות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -94,12 +110,8 @@ if uploaded_file is not None:
 
     df = df.sort_values(by='מספר הגרלה', ascending=False).head(50)
 
-    df_display = df.copy()
-    for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
-        df_display[suit] = df_display[suit].apply(display_card_value)
-
-    st.write("### טבלת 50 הגרלות אחרונות עם קלפים מומרים:")
-    st.write(df_display[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
+    st.write("### טבלת 50 הגרלות אחרונות:")
+    st.write(df[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
 
     st.write("### 25 תחזיות בטבלה:")
     predictions_data = []
@@ -110,9 +122,8 @@ if uploaded_file is not None:
 
     pred_df = pd.DataFrame(predictions_data)
     pred_df = pred_df[ordered_suits]
-
     pred_df.columns = [f"{icons[s]} {s}" for s in ordered_suits]
 
     st.table(pred_df)
 
-st.markdown("פותח על ידי ליביו הוליביה — גרסה סופית ועוצמתית עם כל הדפוסים שנלמדו!")
+st.markdown("פותח ע" + "י ליביו הוליביה — גרסה עם חיזוק לפי שעה, יום וכל הדפוסים שנלמדו!")

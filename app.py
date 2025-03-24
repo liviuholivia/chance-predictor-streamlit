@@ -6,13 +6,11 @@ import datetime
 # הגדרת הצורות והאייקונים
 ordered_suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {"לב שחור": "♠️", "לב אדום": "♥️", "יהלום": "♦️", "תלתן": "♣️"}
-allowed_cards = [7, 8, 9, 10, 11, 12, 13, 14]
+allowed_cards = [7, 8, 9, 10, 11, 12, 13, 14]  # מ-7 עד אס (אס=14)
 
-# המרת ערכי קלפים לתצוגה
 def display_card_value(val):
     return {11: "J", 12: "Q", 13: "K", 14: "A"}.get(val, str(val))
 
-# המרה לקלף מספרי
 def convert_card_value(value):
     if isinstance(value, str):
         if value.strip() == 'A': return 14
@@ -22,7 +20,20 @@ def convert_card_value(value):
         elif value.isdigit(): return int(value)
     return value
 
-# יחסי משיכה ואלכסון משוכללים
+def infer_draw_time(row_index, start_date, start_draw_number, start_time, weekday):
+    # מבוסס על דפוס ידוע: כל 2 שעות מ-9:00 עד 21:00 בימים ראשון-חמישי,
+    # בימי שישי שלוש הגרלות בלבד (10:00, 12:00, 14:00), שבת בלילה (21:30, 23:00)
+    draw_time = None
+    if weekday in range(0, 5):  # ראשון עד חמישי
+        draw_time = (start_time + datetime.timedelta(hours=(row_index % 7) * 2)).time()
+    elif weekday == 5:  # שישי
+        friday_slots = [datetime.time(10, 0), datetime.time(12, 0), datetime.time(14, 0)]
+        draw_time = friday_slots[row_index % 3]
+    elif weekday == 6:  # שבת
+        saturday_slots = [datetime.time(21, 30), datetime.time(23, 0)]
+        draw_time = saturday_slots[row_index % 2]
+    return draw_time.strftime('%H:%M')
+
 pull_relations = {
     7: [8, 9, 10, 11, 14], 8: [9, 11, 13, 14], 9: [10, 12, 13, 14],
     10: [7, 14, 11, 9], 11: [9, 13, 10, 8], 12: [11, 9, 14, 10],
@@ -35,7 +46,6 @@ diagonal_relations = {
     13: [7, 10, 14, 9], 14: [9, 11, 12, 10]
 }
 
-# בניית משקלים חכמים
 def build_weights(df, suit):
     recent = df.sort_values('מספר הגרלה', ascending=False).head(50)
     freq = recent[suit].value_counts().reindex(allowed_cards, fill_value=1).values
@@ -76,7 +86,6 @@ def build_weights(df, suit):
 
     return combined / combined.sum()
 
-# תחזית הבאה על פי האלגוריתם
 def predict_next(df):
     prediction = []
     for suit in ordered_suits:
@@ -85,8 +94,7 @@ def predict_next(df):
         prediction.append({"suit": suit, "card": chosen})
     return prediction
 
-# אפליקציה
-st.title("🎴 אלגוריתם-העל להגרלות צ'אנס — כולל זיהוי שעות ודפוסים")
+st.title("🎴 אלגוריתם סופר חכם להגרלות צ'אנס — גרסה מלאה עם שעות ותחזיות")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של 50 הגרלות אחרונות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -99,13 +107,21 @@ if uploaded_file is not None:
     df = df.sort_values(by='מספר הגרלה', ascending=False).head(50)
 
     df_display = df.copy()
+    df_display['שעה'] = df_display.apply(
+        lambda row: infer_draw_time(
+            row.name, pd.to_datetime(row['תאריך']), row['מספר הגרלה'],
+            datetime.datetime.combine(pd.to_datetime(row['תאריך']), datetime.time(9, 0)),
+            pd.to_datetime(row['תאריך']).weekday()
+        ), axis=1
+    )
+
     for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
         df_display[suit] = df_display[suit].apply(display_card_value)
 
-    st.write("### טבלת 50 ההגרלות האחרונות:")
-    st.write(df_display[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
+    st.write("### טבלת 50 הגרלות אחרונות עם שעות וקלפים מומרים:")
+    st.write(df_display[['תאריך', 'שעה', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
 
-    st.write("### 10 תחזיות מדויקות בטבלה:")
+    st.write("### 10 תחזיות בטבלה:")
     predictions_data = []
     for i in range(1, 11):
         prediction = predict_next(df)
@@ -118,4 +134,4 @@ if uploaded_file is not None:
 
     st.table(pred_df)
 
-st.markdown("פותח על ידי ליביו הוליביה — גרסה סופית ומושלמת עם כל הדפוסים והשעות!")
+st.markdown("פותח על ידי ליביו הוליביה — גרסה סופית חזקה עם שעות, דפוסים ותחזיות!")

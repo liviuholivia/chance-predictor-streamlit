@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
+# סדר הצגת הקלפים: משמאל לימין — עלה, לב, יהלום, תלתן
+ordered_suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
 icons = {
     "לב שחור": "♠️", 
     "לב אדום": "♥️",
@@ -54,14 +55,14 @@ def build_advanced_weights(df, suit):
 
 def predict_from_50(df):
     prediction = []
-    for suit in suits:
+    for suit in ordered_suits:
         base_weights = build_advanced_weights(df, suit)
         chosen_card = np.random.choice(range(1, 14), p=base_weights)
         prediction.append({"suit": suit, "card": chosen_card})
     return prediction
 
 st.set_page_config(page_title="אלגוריתם חכם 50 הגרלות")
-st.title("🎴 אלגוריתם חכם - תחזיות על סמך 50 ההגרלות האחרונות")
+st.title("🎴 תחזיות צ׳אנס מסודרות — תצוגה לרוחב כמו באתר הרשמי")
 
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריית הגרלות:", type=["csv"])
 
@@ -72,21 +73,19 @@ if uploaded_file is not None:
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         df[suit] = df[suit].apply(convert_card_value)
 
-    st.write("### 50 ההגרלות האחרונות (מספר גבוה ביותר קודם):")
+    st.write("### 50 ההגרלות האחרונות (מהחדשות לישנות):")
     preview = df.sort_values(by='מספר הגרלה', ascending=False).head(50).copy()
     for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
         preview[suit] = preview[suit].apply(display_card_value)
     st.dataframe(preview)
 
-    st.write("### תחזיות מדויקות:")
+    st.write("### 10 תחזיות מדויקות — מוצגות לרוחב בסדר הנכון:")
     for i in range(10):
         prediction = predict_from_50(df)
-        # נשמר הסדר כמו באתר: ♠️ לב שחור | ♥️ לב אדום | ♦️ יהלום | ♣️ תלתן
-        st.markdown(f"**תחזית {i+1}:**")
-        cols = st.columns(4)
-        for idx, p in enumerate(prediction):
-            with cols[idx]:
-                st.markdown(f"<h3 style='text-align: center;'>{icons[p['suit']]}<br>{display_card_value(p['card'])}</h3>", unsafe_allow_html=True)
+        # מוודאים שהתחזית מוצגת בדיוק בסדר: עלה | לב | יהלום | תלתן
+        ordered_prediction = [next(p for p in prediction if p['suit'] == suit) for suit in ordered_suits]
+        line = " | ".join([f"{icons[p['suit']]} {display_card_value(p['card'])}" for p in ordered_prediction])
+        st.markdown(f"**תחזית {i+1}:** {line}")
 
 st.markdown("---")
-st.markdown("פותח ע\"י ליביו הוליביה — אלגוריתם חכם ומסודר.")
+st.markdown("פותח ע\"י ליביו הוליביה — אלגוריתם מדויק ותצוגה מקצועית.")

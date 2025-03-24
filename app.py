@@ -20,30 +20,22 @@ def convert_card_value(value):
         elif value.isdigit(): return int(value)
     return value
 
-def infer_draw_time(date_str, draw_number):
-    date = pd.to_datetime(date_str, dayfirst=True)
-    weekday = date.weekday()
+def infer_draw_time(date_str, draw_index, weekday):
+    if weekday in range(0, 5):  # ראשון עד חמישי
+        times = ["09:00", "11:00", "13:00", "15:00", "17:00", "19:00", "21:00"]
+        return times[draw_index % len(times)]
 
-    # ראשון עד חמישי - כל שעתיים מ-9:00 עד 21:00 (7 הגרלות ביום)
-    if weekday in range(0, 5):
-        index = (draw_number - 1) % 7
-        time = datetime.time(9 + index * 2, 0)
+    elif weekday == 5:  # שישי
+        times = ["10:00", "12:00", "14:00"]
+        return times[draw_index % len(times)]
 
-    # שישי - 3 הגרלות: 10:00, 12:00, 14:00
-    elif weekday == 5:
-        index = (draw_number - 1) % 3
-        time = [datetime.time(10, 0), datetime.time(12, 0), datetime.time(14, 0)][index]
+    elif weekday == 6:  # שבת
+        times = ["21:30", "23:00"]
+        return times[draw_index % len(times)]
 
-    # שבת - 2 הגרלות: 21:30, 23:00
-    elif weekday == 6:
-        index = (draw_number - 1) % 2
-        time = [datetime.time(21, 30), datetime.time(23, 0)][index]
-    else:
-        time = datetime.time(0, 0)
+    return "00:00"
 
-    return time.strftime('%H:%M')
-
-st.title("🎴 צירוף שעות הגרלות לפי תאריך והגרלה")
+st.title("🎴 טבלת הגרלות עם שעות מדויקות לפי יום ושיטה!")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של 50 הגרלות אחרונות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -53,9 +45,25 @@ if uploaded_file is not None:
     for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
         df[suit] = df[suit].apply(convert_card_value)
 
-    df['שעה'] = df.apply(lambda row: infer_draw_time(row['תאריך'], row['מספר הגרלה']), axis=1)
+    df = df.sort_values(by='מספר הגרלה', ascending=True).reset_index(drop=True)
 
-    st.write("### טבלה עם שעות משוערות:")
-    st.write(df[['תאריך', 'שעה', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
+    # חישוב שעות לפי הגרלות
+    df['שעה'] = df.apply(
+        lambda row: infer_draw_time(
+            row['תאריך'],
+            df[df['תאריך'] == row['תאריך']].index.get_loc(row.name),
+            pd.to_datetime(row['תאריך'], dayfirst=True).weekday()
+        ),
+        axis=1
+    )
 
-st.markdown("פותח ע" + "י ליביו הוליביה — עם שעות אוטומטיות לפי דפוסי ההגרלות!")
+    df = df.sort_values(by='מספר הגרלה', ascending=False).reset_index(drop=True)
+
+    df_display = df.copy()
+    for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
+        df_display[suit] = df_display[suit].apply(display_card_value)
+
+    st.write("### טבלה מסונכרנת עם שעות הגרלה מדויקות:")
+    st.write(df_display[['תאריך', 'שעה', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']])
+
+st.markdown("פותח ע" + "י ליביו הוליביה — עם סנכרון שעות אוטומטי מדויק!")

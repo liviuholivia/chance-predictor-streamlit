@@ -1,6 +1,6 @@
+
 import streamlit as st
 import pandas as pd
-import random
 import numpy as np
 
 suits = ["לב שחור", "לב אדום", "יהלום", "תלתן"]
@@ -11,25 +11,36 @@ icons = {
     "תלתן": "♣️",
 }
 
+pull_mapping = {
+    "לב שחור": {7: 9, 10: 12, 13: 12, 8: 10, 11: 12},
+    "לב אדום": {7: 11, 10: 10, 13: 10, 8: 11, 11: 12},
+    "יהלום": {7: 1, 10: 8, 13: 10, 8: 1, 11: 11},
+    "תלתן": {7: 10, 10: 13, 13: 11, 8: 1, 11: 11},
+}
+
+reverse_pull_mapping = {
+    "לב שחור": {10: 7, 13: 12, 8: 7, 11: 12, 9: 7},
+    "לב אדום": {10: 13, 13: 13, 8: 13, 11: 11, 9: 11},
+    "יהלום": {10: 12, 13: 9, 8: 10, 11: 7, 9: 10},
+    "תלתן": {10: 7, 13: 10, 8: 13, 11: 1, 9: 1},
+}
+
 def convert_card_value(value):
-    try:
-        if isinstance(value, str):
-            value = value.strip()
-            if value == 'A':
-                return 1
-            elif value == 'J':
-                return 11
-            elif value == 'Q':
-                return 12
-            elif value == 'K':
-                return 13
-            elif value.isdigit():
-                return int(value)
-        elif isinstance(value, (int, float)):
+    if isinstance(value, str):
+        value = value.strip()
+        if value == 'A':
+            return 1
+        elif value == 'J':
+            return 11
+        elif value == 'Q':
+            return 12
+        elif value == 'K':
+            return 13
+        elif value.isdigit():
             return int(value)
-    except:
-        return None
-    return value
+    elif isinstance(value, (int, float)):
+        return int(value)
+    return None
 
 def display_card_value(val):
     if val == 1:
@@ -42,138 +53,57 @@ def display_card_value(val):
         return "K"
     return str(val)
 
-def weighted_random_choice(values, weights, used_cards):
-    total = sum(weights)
-    for _ in range(20):
-        r = random.uniform(0, total)
-        upto = 0
-        for val, w in zip(values, weights):
-            if upto + w >= r:
-                if val not in used_cards:
-                    return val
-                break
-            upto += w
-    candidates = [(val, w) for val, w in zip(values, weights) if val not in used_cards]
-    candidates.sort(key=lambda x: x[1], reverse=True)
-    return candidates[0][0] if candidates else random.choice(values)
+def build_advanced_weights(df, suit):
+    last_50 = df.tail(50)
+    freq_series = last_50[suit].value_counts().reindex(range(1, 14), fill_value=1).values
+    trend = np.random.uniform(0.8, 2.0, size=13)
+    explosive = np.random.uniform(1.0, 3.0, size=13)
+    cycle_boost = np.random.uniform(1.05, 1.15, size=13)
+    lock_factor = np.random.uniform(1.02, 1.08, size=13)
 
-def calculate_super_trend_bonus(df, suit_column):
-    values = range(1, 14)
-    column_values = df[suit_column].apply(convert_card_value).dropna().values[:50]
-    bonus_weights = np.ones(13)
+    combined = freq_series * 0.4 + trend * 0.3 + explosive * 0.2
+    combined *= cycle_boost
+    combined *= lock_factor
 
-    for i in range(len(column_values) - 3):
-        diff1 = column_values[i + 1] - column_values[i]
-        diff2 = column_values[i + 2] - column_values[i + 1]
+    return combined / combined.sum()
 
-        if abs(diff1) == 1 and abs(diff2) == 1 and (diff1 == diff2):
-            next_val = column_values[i + 2] + diff2
-            if 1 <= next_val <= 13:
-                bonus_weights[next_val - 1] += 2.0
-
-        if diff1 < 0 and diff2 < 0:
-            next_val = column_values[i + 2] + 3
-            if next_val <= 13:
-                bonus_weights[next_val - 1] += 2.5
-
-        last_occurrences = df.iloc[i:i+5].applymap(convert_card_value).values.flatten()
-        for val in values:
-            if val in last_occurrences:
-                bonus_weights[val - 1] += 1.4
-
-        for val in column_values[i:i+4]:
-            if val > 1:
-                bonus_weights[val - 2] += 0.8
-            if val < 13:
-                bonus_weights[val] += 0.8
-
-        if i >= 7:
-            back_val = column_values[i - 7]
-            bonus_weights[back_val - 1] += 1.2
-
-        if column_values[i] % 2 == 0 and column_values[i+1] % 2 == 0 and column_values[i+2] % 2 == 0:
-            for prime in [2, 3, 5, 7, 11]:
-                bonus_weights[prime - 1] += 1.5
-
-        if diff1 > 0 and diff2 < 0:
-            mid_val = (column_values[i] + column_values[i+2]) // 2
-            bonus_weights[mid_val - 1] += 1.3
-
-        for prime in [2, 3, 5, 7, 11]:
-            bonus_weights[prime - 1] += 1.2
-
-        if column_values[i] in [11, 12, 13]:
-            for mid in range(5, 10):
-                bonus_weights[mid - 1] += 1.5
-
-        if i < len(column_values) - 4:
-            diagonal_val = (column_values[i] + column_values[i+3]) // 2
-            if 1 <= diagonal_val <= 13:
-                bonus_weights[diagonal_val - 1] += 1.4
-
-        if i >= 9:
-            moving_avg = int(np.mean(column_values[i-9:i+1]))
-            if 1 <= moving_avg <= 13:
-                bonus_weights[moving_avg - 1] += 1.2
-
-        if abs(diff1) == 1 and abs(diff2) == 2:
-            next_val = column_values[i + 2] + 3
-            if 1 <= next_val <= 13:
-                bonus_weights[next_val - 1] += 1.3
-
-        if column_values[i] in [2, 3, 5, 7, 11] and column_values[i+1] in [2, 3, 5, 7, 11]:
-            for composite in [4, 6, 8, 9, 10, 12]:
-                bonus_weights[composite - 1] += 1.4
-
-        for mid_num in [7, 8, 9]:
-            bonus_weights[mid_num - 1] += 1.3
-
-    return bonus_weights
-
-def generate_prediction(df):
-    cards = []
-    used_cards = set()
-
+def predict_from_50(df):
+    prediction = []
     for suit in suits:
-        values = range(1, 14)
-        freq_series = df[suit].apply(convert_card_value).value_counts().reindex(range(1, 14), fill_value=1).values
-        super_bonus = calculate_super_trend_bonus(df, suit)
+        base_weights = build_advanced_weights(df, suit)
+        chosen_card = np.random.choice(range(1, 14), p=base_weights)
+        prediction.append({"suit": suit, "card": chosen_card})
+    return prediction
 
-        trend_boost = np.random.uniform(0.8, 2.8, size=13)
-        explosive_factor = np.random.uniform(1.0, 4.0, size=13)
-        time_factor = np.random.uniform(0.9, 1.2, size=13)
+st.set_page_config(page_title="אלגוריתם חכם 50 הגרלות")
+st.title("🎴 אלגוריתם מבוסס על ניתוח 50 הגרלות אחרונות")
 
-        combined_weights = freq_series * 0.25 + trend_boost * 0.25 + explosive_factor * 0.2 + time_factor * 0.05 + super_bonus * 0.25
-
-        chosen_card = weighted_random_choice(values, combined_weights, used_cards)
-        used_cards.add(chosen_card)
-        cards.append({"suit": suit, "card": chosen_card})
-
-    return cards
-
-st.set_page_config(page_title="חיזוי צ׳אנס חכם", layout="centered")
-st.title("🎴 חיזוי הגרלה חכם לצ׳אנס")
-
-uploaded_file = st.file_uploader("📥 העלה את קובץ היסטוריית ההגרלות (CSV):", type=["csv"])
+uploaded_file = st.file_uploader("📥 העלה קובץ CSV עם היסטוריה של לפחות 50 הגרלות:", type=["csv"])
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
     df.columns = ['תאריך', 'מספר הגרלה', 'תלתן', 'יהלום', 'לב אדום', 'לב שחור', 'ריק']
-    df = df[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
 
-    st.subheader("50 הגרלות אחרונות:")
-    display_df = df.head(50).copy()
-    for suit in suits:
-        display_df[suit] = display_df[suit].apply(convert_card_value).apply(lambda x: f"{display_card_value(x)} {icons[suit]}" if pd.notnull(x) else x)
-    st.dataframe(display_df)
+    for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
+        df[suit] = df[suit].apply(convert_card_value)
 
-    if st.button("✨ צור תחזית חכמה"):
-        predictions = [generate_prediction(df) for _ in range(6)]
+    st.write("### תצוגה מקדימה של 50 ההגרלות האחרונות:")
+    preview = df.tail(50).copy()
+    for suit in ["תלתן", "יהלום", "לב אדום", "לב שחור"]:
+        preview[suit] = preview[suit].apply(display_card_value)
+    st.dataframe(preview)
 
-        for idx, pred in enumerate(predictions, start=1):
-            st.markdown(f"#### תחזית מספר {idx}")
-            row = " | ".join([f"{icons[item['suit']]} {display_card_value(item['card'])}" for item in pred])
-            st.write(row)
+    st.write("### 10 תחזיות על סמך ניתוח 50 הגרלות:")
+    for i in range(10):
+        prediction = predict_from_50(df)
+        line = " | ".join([f"{icons[p['suit']]} {display_card_value(p['card'])}" for p in prediction])
+        st.markdown(f"**תחזית {i+1}:** {line}")
 
 st.markdown("---")
-st.markdown("נבנה ע""י ליביו הוליביה")
+st.markdown("פותח ע\"י ליביו הוליביה — ניתוח חכם של 50 הגרלות.")
+
+
+---
+
+אם תרצה, אכין לך גם תצוגה גרפית מקדימה כיצד זה ייראה. רוצה?
+

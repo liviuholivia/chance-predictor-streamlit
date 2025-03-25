@@ -34,7 +34,8 @@ patterns_impact = {
     "קלף מושך בין שורות": 2.2,
 }
 
-def build_weights_with_patterns(df, patterns, suit, history_depth, pattern_weight):
+# פונקציה לחיזוי תוך למידה עצמית מהתוצאות האחרונות
+def build_weights_with_learning(df, patterns, suit, history_depth, pattern_weight):
     recent = df.sort_values('מספר הגרלה', ascending=False).head(history_depth)
     freq = recent[suit].value_counts().reindex(allowed_cards, fill_value=1).values
 
@@ -43,6 +44,7 @@ def build_weights_with_patterns(df, patterns, suit, history_depth, pattern_weigh
     lock_factor = np.ones(len(allowed_cards))
     correction_factor = np.ones(len(allowed_cards))
     pattern_factor = np.ones(len(allowed_cards))
+    learning_factor = np.ones(len(allowed_cards))
 
     last_card = recent.iloc[0][suit]
 
@@ -68,12 +70,16 @@ def build_weights_with_patterns(df, patterns, suit, history_depth, pattern_weigh
             factor = patterns_impact.get(p[0], 1.0)
             pattern_factor[idx] += factor * pattern_weight
 
+        # למידה עצמית: חיזוק קלפים שיצאו לאחרונה מספר פעמים
+        recent_count = (recent[suit] == card).sum()
+        learning_factor[idx] += recent_count * 0.5
+
     base = freq * 0.18 + np.random.uniform(0.9, 1.1, size=len(allowed_cards))
-    combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.2 * pattern_factor
+    combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.2 * pattern_factor * learning_factor
 
     return combined / combined.sum()
 
-st.title("🎴 אלגוריתם חיזוי דור 3 — חכם, מותאם, ולומד!")
+st.title("🎴 אלגוריתם חיזוי דור 4 — לומד ומתאים את עצמו!")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של הגרלות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -100,13 +106,13 @@ if uploaded_file is not None:
         pattern_weight = st.slider("בחר עוצמת השפעת הדפוסים:", 0.5, 5.0, 1.0, 0.1)
 
         if st.button("🔄 רענן תחזיות"):
-            st.write("### תחזיות מותאמות:")
+            st.write("### תחזיות חכמות עם למידה עצמית:")
             predictions_data = []
 
             for i in range(1, 26):
                 prediction = []
                 for suit in ordered_suits:
-                    weights = build_weights_with_patterns(df, patterns, suit, history_depth, pattern_weight)
+                    weights = build_weights_with_learning(df, patterns, suit, history_depth, pattern_weight)
                     chosen = np.random.choice(allowed_cards, p=weights)
                     prediction.append({"suit": suit, "card": chosen})
 
@@ -118,4 +124,4 @@ if uploaded_file is not None:
 
             st.table(pred_df)
 
-st.markdown("פותח על ידי ליביו הוליביה — גרסת דור 3: עם התאמה חכמה ולמידה!")
+st.markdown("פותח על ידי ליביו הוליביה — גרסה 4: לומדת, מתעדכנת ומתחזקת!")

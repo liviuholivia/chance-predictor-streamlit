@@ -34,8 +34,8 @@ patterns_impact = {
     "קלף מושך בין שורות": 2.2,
 }
 
-def build_weights_with_patterns(df, patterns, suit):
-    recent = df.sort_values('מספר הגרלה', ascending=False).head(100)
+def build_weights_with_patterns(df, patterns, suit, history_depth, pattern_weight):
+    recent = df.sort_values('מספר הגרלה', ascending=False).head(history_depth)
     freq = recent[suit].value_counts().reindex(allowed_cards, fill_value=1).values
 
     pull_factor = np.ones(len(allowed_cards))
@@ -66,14 +66,14 @@ def build_weights_with_patterns(df, patterns, suit):
         card_patterns = [p for p in patterns if str(card) in str(p[2])]
         for p in card_patterns:
             factor = patterns_impact.get(p[0], 1.0)
-            pattern_factor[idx] += factor
+            pattern_factor[idx] += factor * pattern_weight
 
     base = freq * 0.18 + np.random.uniform(0.9, 1.1, size=len(allowed_cards))
-    combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.2 * pattern_factor * 0.4
+    combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.2 * pattern_factor
 
     return combined / combined.sum()
 
-st.title("🎴 אלגוריתם חיזוי דור 2 — עם דפוסים ושולחן תחזיות")
+st.title("🎴 אלגוריתם חיזוי דור 3 — חכם, מותאם, ולומד!")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של הגרלות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -96,14 +96,17 @@ if uploaded_file is not None:
         patterns_df = pd.read_csv(patterns_file)
         patterns = patterns_df.values.tolist()
 
+        history_depth = st.slider("בחר עומק סריקה (מספר הגרלות אחורה):", 50, 1000, 100)
+        pattern_weight = st.slider("בחר עוצמת השפעת הדפוסים:", 0.5, 5.0, 1.0, 0.1)
+
         if st.button("🔄 רענן תחזיות"):
-            st.write("### תחזיות חדשות:")
+            st.write("### תחזיות מותאמות:")
             predictions_data = []
 
             for i in range(1, 26):
                 prediction = []
                 for suit in ordered_suits:
-                    weights = build_weights_with_patterns(df, patterns, suit)
+                    weights = build_weights_with_patterns(df, patterns, suit, history_depth, pattern_weight)
                     chosen = np.random.choice(allowed_cards, p=weights)
                     prediction.append({"suit": suit, "card": chosen})
 
@@ -115,4 +118,4 @@ if uploaded_file is not None:
 
             st.table(pred_df)
 
-st.markdown("פותח על ידי ליביו הוליביה — גרסת סופר חיזוי חכמה!")
+st.markdown("פותח על ידי ליביו הוליביה — גרסת דור 3: עם התאמה חכמה ולמידה!")

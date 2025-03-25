@@ -17,8 +17,8 @@ def convert_card_value(value):
     return value
 
 # משיכות ויחסי אלכסון
-pull_relations = {...}  # כפי שהיה בקוד שלך
-diagonal_relations = {...}  # כפי שהיה בקוד שלך
+pull_relations = {...}
+diagonal_relations = {...}
 
 patterns_impact = {
     "רצף עולה מלא": 1.8,
@@ -73,7 +73,7 @@ def build_weights_with_patterns(df, patterns, suit):
 
     return combined / combined.sum()
 
-st.title("🎴 אלגוריתם חיזוי חכם דור 2 — מבוסס דפוסים!")
+st.title("🎴 אלגוריתם חיזוי דור 2 — עם דפוסים ושולחן תחזיות")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של הגרלות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -83,14 +83,12 @@ if uploaded_file is not None:
     for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
         df[suit] = df[suit].apply(convert_card_value)
 
-    # הצגת 50 ההגרלות האחרונות
-    df_display = df.sort_values(by='מספר הגרלה', ascending=False).head(50)
-    for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
-        df_display[suit] = df_display[suit].apply(display_card_value)
-
-    df_display = df_display[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
     st.write("### 50 הגרלות אחרונות:")
-    st.dataframe(df_display)
+    last_50 = df.sort_values(by='מספר הגרלה', ascending=False).head(50).copy()
+    for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
+        last_50[suit] = last_50[suit].apply(display_card_value)
+    last_50 = last_50[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
+    st.dataframe(last_50)
 
     patterns_file = st.file_uploader("📥 העלה קובץ דפוסים שנמצאו:", type=["csv"])
 
@@ -98,22 +96,23 @@ if uploaded_file is not None:
         patterns_df = pd.read_csv(patterns_file)
         patterns = patterns_df.values.tolist()
 
-        st.write("### 25 תחזיות מתקדמות:")
-        predictions_data = []
+        if st.button("🔄 רענן תחזיות"):
+            st.write("### תחזיות חדשות:")
+            predictions_data = []
 
-        for i in range(1, 26):
-            prediction = []
-            for suit in ordered_suits:
-                weights = build_weights_with_patterns(df, patterns, suit)
-                chosen = np.random.choice(allowed_cards, p=weights)
-                prediction.append({"suit": suit, "card": chosen})
+            for i in range(1, 26):
+                prediction = []
+                for suit in ordered_suits:
+                    weights = build_weights_with_patterns(df, patterns, suit)
+                    chosen = np.random.choice(allowed_cards, p=weights)
+                    prediction.append({"suit": suit, "card": chosen})
 
-            row = {p['suit']: display_card_value(p['card']) for p in prediction}
-            predictions_data.append(row)
+                row = {p['suit']: display_card_value(p['card']) for p in prediction}
+                predictions_data.append(row)
 
-        pred_df = pd.DataFrame(predictions_data)[ordered_suits]
-        pred_df.columns = [f"{icons[s]} {s}" for s in ordered_suits]
+            pred_df = pd.DataFrame(predictions_data)[ordered_suits]
+            pred_df.columns = [f"{icons[s]} {s}" for s in ordered_suits]
 
-        st.table(pred_df)
+            st.table(pred_df)
 
-st.markdown("פותח על ידי ליביו הוליביה — אלגוריתם חיזוי דור 2 המבוסס על דפוסים אמיתיים!")
+st.markdown("פותח על ידי ליביו הוליביה — גרסת סופר חיזוי חכמה!")

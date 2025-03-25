@@ -20,7 +20,6 @@ def convert_card_value(value):
 pull_relations = {...}  # כפי שהיה בקוד שלך
 diagonal_relations = {...}  # כפי שהיה בקוד שלך
 
-# שימוש בדפוסים שנמצאו כהשפעה נוספת
 patterns_impact = {
     "רצף עולה מלא": 1.8,
     "רצף יורד מלא": 1.8,
@@ -35,7 +34,6 @@ patterns_impact = {
     "קלף מושך בין שורות": 2.2,
 }
 
-# פונקציה חדשה לבניית משקלים כולל דפוסים
 def build_weights_with_patterns(df, patterns, suit):
     recent = df.sort_values('מספר הגרלה', ascending=False).head(100)
     freq = recent[suit].value_counts().reindex(allowed_cards, fill_value=1).values
@@ -65,7 +63,6 @@ def build_weights_with_patterns(df, patterns, suit):
         if abs(card - last_card) >= 4:
             correction_factor[idx] += 3.5
 
-        # חיזוק לפי הופעה בדפוסים שנמצאו
         card_patterns = [p for p in patterns if str(card) in str(p[2])]
         for p in card_patterns:
             factor = patterns_impact.get(p[0], 1.0)
@@ -76,7 +73,6 @@ def build_weights_with_patterns(df, patterns, suit):
 
     return combined / combined.sum()
 
-# חיזוי בעזרת הדפוסים
 st.title("🎴 אלגוריתם חיזוי חכם דור 2 — מבוסס דפוסים!")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של הגרלות:", type=["csv"])
 
@@ -87,7 +83,15 @@ if uploaded_file is not None:
     for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
         df[suit] = df[suit].apply(convert_card_value)
 
-    # טען את הדפוסים שנמצאו (נניח בקובץ נוסף או ממקור חיצוני) — להדגמה נטען מקובץ מקומי
+    # הצגת 50 ההגרלות האחרונות
+    df_display = df.sort_values(by='מספר הגרלה', ascending=False).head(50)
+    for suit in ['תלתן', 'יהלום', 'לב אדום', 'לב שחור']:
+        df_display[suit] = df_display[suit].apply(display_card_value)
+
+    df_display = df_display[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
+    st.write("### 50 הגרלות אחרונות:")
+    st.dataframe(df_display)
+
     patterns_file = st.file_uploader("📥 העלה קובץ דפוסים שנמצאו:", type=["csv"])
 
     if patterns_file is not None:

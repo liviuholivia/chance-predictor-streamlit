@@ -22,7 +22,6 @@ patterns_impact = {
     "קלף מושך בין שורות": 2.2,
 }
 
-# יחסי משיכה ואלכסונים דינמיים
 pull_relations = {...}
 diagonal_relations = {...}
 
@@ -34,8 +33,8 @@ def convert_card_value(value):
         return {"A": 14, "J": 11, "Q": 12, "K": 13}.get(value.strip(), int(value) if value.isdigit() else value)
     return value
 
-# בניית משקלים חכמים מרובי גורמים
-def build_optimized_weights(df, suit, history_depth):
+# פונקציה לחיזוי כפי שהיה קודם, רק בלי העלאת קובץ דפוסים
+def build_weights_with_patterns(df, suit, history_depth):
     recent = df.sort_values('מספר הגרלה', ascending=False).head(history_depth)
     freq = recent[suit].value_counts().reindex(allowed_cards, fill_value=1).values
 
@@ -43,8 +42,6 @@ def build_optimized_weights(df, suit, history_depth):
     diagonal_factor = np.ones(len(allowed_cards))
     lock_factor = np.ones(len(allowed_cards))
     correction_factor = np.ones(len(allowed_cards))
-    learning_factor = np.ones(len(allowed_cards))
-    prime_boost_factor = np.ones(len(allowed_cards))
 
     last_card = recent.iloc[0][suit]
 
@@ -52,33 +49,25 @@ def build_optimized_weights(df, suit, history_depth):
         if card in pull_relations:
             for pull_card in pull_relations[card]:
                 if pull_card in allowed_cards:
-                    pull_factor[allowed_cards.index(pull_card)] += 2.5
+                    pull_factor[allowed_cards.index(pull_card)] += 2.2
 
         if card in diagonal_relations:
             for diag in diagonal_relations[card]:
                 if diag in allowed_cards:
-                    diagonal_factor[allowed_cards.index(diag)] += 2.2
+                    diagonal_factor[allowed_cards.index(diag)] += 2
 
         if card == last_card:
-            lock_factor[idx] += 3.0
+            lock_factor[idx] += 2.7
 
         if abs(card - last_card) >= 4:
-            correction_factor[idx] += 4.0
+            correction_factor[idx] += 3.5
 
-        recent_count = (recent[suit] == card).sum()
-        learning_factor[idx] += recent_count * 0.6
-
-        if card in [7, 11, 13]:  # דחיפה לקלפים אסטרטגיים
-            prime_boost_factor[idx] += 1.3
-
-    base = freq * 0.22 + np.random.uniform(0.95, 1.05, size=len(allowed_cards))
-    combined = (
-        base * pull_factor * 0.35 * diagonal_factor * 0.3 * lock_factor * 0.2 * correction_factor * 0.25 * learning_factor * prime_boost_factor * 0.4
-    )
+    base = freq * 0.18 + np.random.uniform(0.9, 1.1, size=len(allowed_cards))
+    combined = base * pull_factor * 0.3 * diagonal_factor * 0.25 * lock_factor * 0.15 * correction_factor * 0.2
 
     return combined / combined.sum()
 
-st.title("🎴 אלגוריתם חיזוי דור 5 — בגרסה האופטימלית המלאה!")
+st.title("🎴 אלגוריתם חיזוי דור 3 — אופטימלי וללא קובץ דפוסים")
 uploaded_file = st.file_uploader("📥 העלה קובץ CSV של הגרלות:", type=["csv"])
 
 if uploaded_file is not None:
@@ -95,16 +84,16 @@ if uploaded_file is not None:
     last_50 = last_50[['תאריך', 'מספר הגרלה', 'לב שחור', 'לב אדום', 'יהלום', 'תלתן']]
     st.dataframe(last_50)
 
-    history_depth = st.slider("בחר עומק סריקה (מספר הגרלות אחורה):", 50, 2000, 200)
+    history_depth = st.slider("בחר עומק סריקה (מספר הגרלות אחורה):", 50, 1000, 100)
 
     if st.button("🔄 רענן תחזיות"):
-        st.write("### תחזיות אופטימליות:")
+        st.write("### תחזיות חדשות:")
         predictions_data = []
 
         for i in range(1, 26):
             prediction = []
             for suit in ordered_suits:
-                weights = build_optimized_weights(df, suit, history_depth)
+                weights = build_weights_with_patterns(df, suit, history_depth)
                 chosen = np.random.choice(allowed_cards, p=weights)
                 prediction.append({"suit": suit, "card": chosen})
 
@@ -116,4 +105,4 @@ if uploaded_file is not None:
 
         st.table(pred_df)
 
-st.markdown("פותח על ידי ליביו הוליביה — גרסה 5, מקסימום עוצמה וחוכמה!")
+st.markdown("פותח על ידי ליביו הוליביה — גרסה ממוקדת, ללא צורך בהעלאת קובץ דפוסים!")
